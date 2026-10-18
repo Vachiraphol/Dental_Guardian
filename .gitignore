@@ -1,6 +1,18 @@
+# Python bytecode and cache
 *.py[cod]
-assets/external/
 __pycache__/
+
+# Python virtual environments
+.venv/
+venv/
+
+# Environment variables and secrets
+.env
+
+# Reflex generated files
+.web/
+
+# Existing project-specific rules
+assets/external/
 .states
 *.db
-.web

@@ -1,3 +1,4 @@
+.web
 # Python bytecode and cache
 *.py[cod]
 __pycache__/

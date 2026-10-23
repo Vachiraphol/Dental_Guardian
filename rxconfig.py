@@ -2,6 +2,7 @@ import reflex as rx
 
 config = rx.Config(
     app_name="dental_clinic_system",
+    db_url="sqlite:///reflex.db",
     plugins=[
         rx.plugins.SitemapPlugin(),
         rx.plugins.TailwindV4Plugin(),

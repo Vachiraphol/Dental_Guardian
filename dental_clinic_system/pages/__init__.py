@@ -3,4 +3,5 @@
 from . import (
     home,
     login,
+    register,
 )

@@ -5,5 +5,6 @@ from . import (
     home,
     login,
     profile,
+    profile_edit,
     register,
 )

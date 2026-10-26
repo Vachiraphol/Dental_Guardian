@@ -8,6 +8,7 @@ from . import (
     home,
     login,
     my_appointments,
+    my_history,
     privacy,
     profile,
     profile_edit,

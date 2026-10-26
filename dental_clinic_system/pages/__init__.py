@@ -4,5 +4,6 @@ from . import (
     forgot_password,
     home,
     login,
+    profile,
     register,
 )

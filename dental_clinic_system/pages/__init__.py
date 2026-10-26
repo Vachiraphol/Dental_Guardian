@@ -2,6 +2,7 @@
 
 from . import (
     booking,
+    booking_summary,
     change_password,
     forgot_password,
     home,

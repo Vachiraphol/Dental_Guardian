@@ -1,86 +1,123 @@
 import reflex as rx
 
+from dental_clinic_system.components.brand import brand
+from dental_clinic_system.state import AppState
+
+PUBLIC_LINKS = [
+    ("หน้าแรก", "/"),
+    ("จองคิว", "/booking"),
+    ("นัดหมายของฉัน", "/my-appointments"),
+    ("ประวัติการรักษา", "/my-history"),
+]
+
+
+def nav_link(text: str, href: str, icon: str = "") -> rx.Component:
+    return rx.link(
+        rx.hstack(
+            *([rx.icon(tag=icon, size=16)] if icon else []),
+            rx.text(text, size="2", weight="medium"),
+            align="center",
+            spacing="1",
+        ),
+        href=href,
+        color="var(--slate-12)",
+        padding_x="14px",
+        padding_y="8px",
+        border_radius="999px",
+        transition="all 0.2s ease",
+        _hover={"background_color": "white", "color": "var(--primary-color)", "box_shadow": "0 2px 8px rgba(0,0,0,0.06)"},
+        underline="none",
+        white_space="nowrap",
+    )
+
+
+def user_menu() -> rx.Component:
+    return rx.cond(
+        AppState.is_logged_in,
+        rx.menu.root(
+            rx.menu.trigger(
+                rx.button(
+                    rx.avatar(fallback=AppState.user_initials, size="1", radius="full", color_scheme="purple"),
+                    rx.text(AppState.user_name, size="2", max_width="140px", overflow="hidden",
+                            text_overflow="ellipsis", white_space="nowrap", display=["none", "inline"]),
+                    rx.icon(tag="chevron_down", size=14),
+                    variant="soft",
+                    color_scheme="purple",
+                    radius="full",
+                ),
+            ),
+            rx.menu.content(
+                rx.cond(
+                    AppState.is_staff,
+                    rx.fragment(
+                        rx.menu.item(rx.icon(tag="layout_dashboard", size=14), "แดชบอร์ดผู้ป่วยรายวัน", on_click=rx.redirect("/dashboard")),
+                    ),
+                    rx.fragment(
+                        rx.menu.item(rx.icon(tag="user", size=14), "ข้อมูลส่วนตัว", on_click=rx.redirect("/profile")),
+                        rx.menu.item(rx.icon(tag="pencil", size=14), "แก้ไขข้อมูลส่วนตัว", on_click=rx.redirect("/profile/edit")),
+                        rx.menu.item(rx.icon(tag="key_round", size=14), "เปลี่ยนรหัสผ่าน", on_click=rx.redirect("/profile/password")),
+                        rx.menu.item(rx.icon(tag="shield_check", size=14), "ตั้งค่าความเป็นส่วนตัว", on_click=rx.redirect("/profile/privacy")),
+                    ),
+                ),
+                rx.menu.separator(),
+                rx.menu.item(rx.icon(tag="log_out", size=14), "ออกจากระบบ", color="red", on_click=AppState.logout),
+            ),
+        ),
+        rx.hstack(
+            rx.link(rx.button("เข้าสู่ระบบ", variant="soft", color_scheme="purple", radius="full", size="2"), href="/login"),
+            rx.link(rx.button("สมัครสมาชิก", color_scheme="purple", radius="full", size="2"), href="/register",
+                    display=["none", "block"]),
+            spacing="2",
+        ),
+    )
+
+
+def mobile_menu() -> rx.Component:
+    return rx.menu.root(
+        rx.menu.trigger(rx.icon_button(rx.icon(tag="menu"), variant="ghost", color_scheme="gray", size="3")),
+        rx.menu.content(
+            *[rx.menu.item(text, on_click=rx.redirect(href)) for text, href in PUBLIC_LINKS],
+            rx.menu.separator(),
+            rx.menu.item("สำหรับเจ้าหน้าที่", on_click=rx.redirect("/dashboard")),
+        ),
+    )
+
+
 def header() -> rx.Component:
     return rx.box(
         rx.hstack(
-            # Logo / Home Link
-            rx.link(
-                rx.hstack(
-                    rx.center(
-                        rx.icon(tag="shield_plus", color="white", size=20),
-                        background="linear-gradient(135deg, var(--purple-9) 0%, var(--plum-9) 100%)",
-                        border_radius="xl",
-                        padding="2",
-                        box_shadow="0px 4px 10px rgba(142, 78, 208, 0.3)",
-                    ),
-                    rx.heading(
-                        "Dental Guardian", 
-                        size="6", 
-                        weight="bold", 
-                        color="var(--slate-12)",
-                        letter_spacing="-0.02em",
-                    ),
-                    align="center",
-                    spacing="3",
-                    transition="transform 0.2s ease",
-                    _hover={"transform": "scale(1.02)"},
-                ),
-                href="/",
-                underline="none",
-            ),
+            rx.link(brand(), href="/", underline="none"),
             rx.spacer(),
-            # Navigation Links
             rx.hstack(
-                rx.link(
-                    "ประวัติการรักษา",
-                    href="/history",
-                    size="3",
-                    weight="medium",
-                    color="var(--slate-11)",
-                    padding_x="4",
-                    padding_y="2",
-                    border_radius="full",
-                    transition="all 0.2s ease",
-                    _hover={"background_color": "var(--purple-3)", "color": "var(--purple-11)"},
-                    underline="none",
+                rx.hstack(
+                    *[nav_link(text, href) for text, href in PUBLIC_LINKS],
+                    align="center",
+                    spacing="1",
+                    padding="4px",
+                    border_radius="999px",
+                    background_color="rgba(255, 255, 255, 0.65)",
+                    border="1px solid rgba(255, 255, 255, 0.9)",
+                    box_shadow="0 2px 12px rgba(80, 60, 140, 0.06)",
+                    backdrop_filter="blur(8px)",
                 ),
-                rx.link(
-                    rx.button(
-                        "เข้าสู่ระบบ",
-                        variant="solid",
-                        color_scheme="purple",
-                        size="3",
-                        radius="full",
-                        weight="bold",
-                        box_shadow="0px 4px 12px rgba(142, 78, 208, 0.25)",
-                        transition="all 0.2s ease",
-                        _hover={"transform": "translateY(-1px)", "box_shadow": "0px 6px 16px rgba(142, 78, 208, 0.35)"},
-                    ),
-                    href="/auth",
-                ),
-                rx.avatar(
-                    fallback="US", 
-                    color_scheme="purple", 
-                    size="3", 
-                    radius="full",
-                    box_shadow="0px 2px 8px rgba(0,0,0,0.08)",
-                ),
+                nav_link("สำหรับเจ้าหน้าที่", "/dashboard", "stethoscope"),
+                rx.box(width="1px", height="24px", background_color="var(--slate-6)"),
                 align="center",
-                spacing="4",
+                spacing="3",
+                display=["none", "none", "none", "none", "flex"],
             ),
+            user_menu(),
+            rx.box(mobile_menu(), display=["block", "block", "block", "block", "none"]),
             width="100%",
-            max_width="1200px",
+            max_width="1280px",
             margin="0 auto",
             align="center",
-            padding_x="6",
-            padding_y="3",
+            padding_x=["16px", "24px"],
+            padding_y="14px",
+            spacing="3",
         ),
-        box_shadow="0px 4px 20px rgba(0, 0, 0, 0.03)",
-        background_color="rgba(255, 255, 255, 0.85)",
-        backdrop_filter="blur(12px)",
-        border_bottom="1px solid var(--slate-3)",
-        position="sticky",
-        top="0",
+        background_color="transparent",
+        position="relative",
         z_index="50",
         width="100%",
     )

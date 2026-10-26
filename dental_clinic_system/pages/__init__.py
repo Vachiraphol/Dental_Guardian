@@ -2,4 +2,5 @@
 
 from . import (
     home,
+    login,
 )

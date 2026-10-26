@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: dental_clinic_web
+    restart: always
+    ports:
+      - "3000:3000"
+      - "8000:8000"
+    environment:
+      - PORT=8000
+    volumes:
+      - ./assets:/app/assets
+      - ./dental_clinic_system:/app/dental_clinic_system

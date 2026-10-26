@@ -5,6 +5,7 @@ from . import (
     forgot_password,
     home,
     login,
+    privacy,
     profile,
     profile_edit,
     register,

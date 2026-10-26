@@ -14,4 +14,5 @@ from . import (
     profile,
     profile_edit,
     register,
+    requests,
 )

@@ -16,4 +16,5 @@ from . import (
     profile_edit,
     register,
     requests,
+    schedule,
 )

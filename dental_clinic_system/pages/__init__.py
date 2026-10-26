@@ -14,6 +14,7 @@ from . import (
     privacy,
     profile,
     profile_edit,
+    records,
     register,
     requests,
     schedule,

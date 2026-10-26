@@ -4,6 +4,7 @@ from . import (
     booking,
     booking_summary,
     change_password,
+    dashboard,
     forgot_password,
     home,
     login,

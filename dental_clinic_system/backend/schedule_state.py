@@ -2,11 +2,11 @@ import reflex as rx
 from sqlmodel import select
 from datetime import date, datetime, timedelta
 import uuid
-from typing import List, Optional, Dict, Any
-from .models import QueueBooking, Appointment  # import จาก models.py ในโฟลเดอร์ backend เดียวกัน
+from typing import List, Optional
+from .models import QueueBooking, Appointment
 
 class ScheduleState(rx.State):
-    # Form: การจองคิว[cite: 1]
+    # Form: การจองคิว
     q_name: str = ""
     q_phone: str = ""
     q_date: str = str(date.today())
@@ -15,7 +15,7 @@ class ScheduleState(rx.State):
     q_disease: str = ""
     q_allergy: str = ""
 
-    # Form: การนัดหมาย[cite: 1]
+    # Form: การนัดหมาย
     appt_name: str = ""
     appt_contact: str = ""
     appt_date: str = str(date.today() + timedelta(days=7))
@@ -23,12 +23,12 @@ class ScheduleState(rx.State):
     appt_purpose: str = ""
     appt_notes: str = ""
 
-    # Dashboard & ปฏิทิน[cite: 1]
+    # Dashboard & ปฏิทิน
     filter_date: str = str(date.today())
     daily_queues: List[QueueBooking] = []
     daily_appts: List[Appointment] = []
 
-    # ป๊อปอัปใบสรุปและใบนัด[cite: 1]
+    # ป๊อปอัปใบสรุปและใบนัด
     latest_booking_slip: Optional[QueueBooking] = None
     latest_appointment_slip: Optional[Appointment] = None
     is_booking_slip_ready: bool = False
@@ -51,7 +51,7 @@ class ScheduleState(rx.State):
                 service_type=self.q_service or "ตรวจสุขภาพช่องปากทั่วไป",
                 underlying_disease=self.q_disease.strip() or "ไม่มี",
                 drug_allergy=self.q_allergy.strip() or "ไม่มี",
-                status="รออนุมัติ",[cite: 1]
+                status="รออนุมัติ",
                 booking_code=code,
             )
             session.add(new_booking)
@@ -92,7 +92,7 @@ class ScheduleState(rx.State):
                 appointment_date=target_date,
                 appointment_time=target_time,
                 purpose=self.appt_purpose.strip(),
-                status="มาตามเวลานัด",[cite: 1]
+                status="มาตามเวลานัด",
                 appointment_slip_code=slip_code,
                 notes=self.appt_notes.strip() or None,
             )

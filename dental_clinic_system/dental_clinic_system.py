@@ -1,4 +1,5 @@
 import reflex as rx
+from .backend.models import QueueBooking, Appointment
 from . import pages  # noqa: F401  (registers every @rx.page)
 
 class State(rx.State):

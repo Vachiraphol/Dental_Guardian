@@ -16,3 +16,7 @@ venv/
 assets/external/
 .states
 *.db
+# Local / deployment files
+.DS_Store
+reflex.log
+deploy.exp

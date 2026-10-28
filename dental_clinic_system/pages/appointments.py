@@ -155,8 +155,8 @@ def next_appt_dialog() -> rx.Component:
     )
 
 
-@rx.page(route="/appointments", title="จัดการนัดหมายคนไข้ - Dental Guardian")
-def appointments() -> rx.Component:
+@rx.page(route="/appointments", title="จัดการนัดหมายคนไข้", on_load=AppState.load_schedule_data)
+def appointments():
     return staff_page(
         "appointments",
         page_header(

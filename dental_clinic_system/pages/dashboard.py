@@ -98,8 +98,8 @@ def patient_card(a) -> rx.Component:
     )
 
 
-@rx.page(route="/dashboard", title="แดชบอร์ดผู้ป่วยรายวัน - Dental Guardian")
-def dashboard() -> rx.Component:
+@rx.page(route="/dashboard", title="แดชบอร์ด", on_load=AppState.load_schedule_data)
+def dashboard():
     s = AppState.daily_stats
     return staff_page(
         "dashboard",

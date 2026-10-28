@@ -72,8 +72,8 @@ def appt_card(a, upcoming: bool) -> rx.Component:
     )
 
 
-@rx.page(route="/my-appointments", title="ตารางนัดหมายของฉัน - Dental Guardian")
-def my_appointments() -> rx.Component:
+@rx.page(route="/my-appointments", title="ตารางนัดหมายของฉัน", on_load=AppState.load_schedule_data)
+def my_appointments():
     return member_page(
         "appointments",
         page_header(

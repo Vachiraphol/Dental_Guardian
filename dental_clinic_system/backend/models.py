@@ -10,6 +10,7 @@ def get_utc_now():
 class QueueBooking(rx.Model, table=True):
     """ตารางเก็บข้อมูลการจองคิวของผู้ป่วย"""
     id: Optional[int] = Field(default=None, primary_key=True)
+    patient_id: Optional[str] = Field(default=None, index=True)  # <-- เพิ่มรองรับ Auth ID
     patient_name: str
     phone_number: str
     booking_date: date
@@ -24,14 +25,26 @@ class QueueBooking(rx.Model, table=True):
 class Appointment(rx.Model, table=True):
     """ตารางเก็บข้อมูลการนัดหมายครั้งถัดไป"""
     id: Optional[int] = Field(default=None, primary_key=True)
+    patient_id: Optional[str] = Field(default=None, index=True)  # <-- เพิ่มรองรับ Auth ID
     patient_name: str
     contact_info: str
     appointment_date: date
     appointment_time: time
     purpose: str
-    status: str = Field(default="มาตามเวลานัด")
+    status: str = Field(default="ยืนยันแล้ว")  # <-- ปรับสถานะเริ่มต้นเป็น "ยืนยันแล้ว"
     appointment_slip_code: str = Field(unique=True)
     rescheduled_from_date: Optional[date] = None
     rescheduled_from_time: Optional[time] = None
     notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=get_utc_now)
+
+class TreatmentEntry(rx.Model, table=True):
+    """ตารางเก็บประวัติการรักษาและผังฟัน (SRS 5.4)"""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    patient_id: str = Field(index=True)
+    tooth_number: str
+    icd_code: str
+    procedure_name: str
+    notes: Optional[str] = None
+    dentist_name: Optional[str] = "ทันตแพทย์ผู้ตรวจ"
     created_at: datetime = Field(default_factory=get_utc_now)

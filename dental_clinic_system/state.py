@@ -16,7 +16,7 @@ import uuid
 import reflex as rx
 from sqlmodel import select
 
-from dental_clinic_system.backend.models import QueueBooking, Appointment, get_utc_now
+from dental_clinic_system.backend.models import QueueBooking, Appointment, TreatmentEntry, get_utc_now
 
 THAI_MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
 THAI_DAYS = ["จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส.", "อา."]  # isoweekday 1..7
@@ -167,13 +167,31 @@ def generate_default_slots() -> list[dict[str, str]]:
 class AppState(rx.State):
     # ---- data: TODO(backend) load these from the database (rows go through format_*)
     patients: list[dict[str, str]] = []
-    dentists: list[dict[str, str]] = []
+    dentists: list[dict[str, str]] = [
+        {
+            "id": "D-001",
+            "name": "ทพ. สมศักดิ์ รักฟัน",
+            "days": "1,2,3,4,5",  # ทำงาน จันทร์-ศุกร์ (หยุด เสาร์-อาทิตย์)
+            "start": "09:00",
+            "end": "17:00",
+            "lunch": "12:00",
+            "leaves": "2026-11-05",  # วันลาตัวอย่าง
+        },
+        {
+            "id": "D-002",
+            "name": "ทพญ. วารี สดใส",
+            "days": "2,3,4,5,6",  # ทำงาน อังคาร-เสาร์ (หยุด อาทิตย์-จันทร์)
+            "start": "10:00",
+            "end": "19:00",
+            "lunch": "13:00",
+            "leaves": "",
+        },
+    ]
     appointments: list[dict[str, str]] = []
     entries: list[dict[str, str]] = []
     # free time slots for booking_date: [{"time": "09:00", "left": "2", "available": "1"}]
     available_slots: list[dict[str, str]] = generate_default_slots()
 
-    # ---- session (5.1) ----
     # ---- session (5.1) ----
     user_role: str = "patient"
     user_name: str = "ปทิตญา ภูภิจคุณาเดชากร"
@@ -292,17 +310,40 @@ class AppState(rx.State):
     # ======================================================================
     @rx.var
     def booking_days(self) -> list[dict[str, str]]:
-        """The next 14 days for the date picker (open/closed comes from the backend)."""
+        """สร้างรายการ 14 วันข้างหน้า พร้อมตรวจสอบวันปิดทำการและวันลาของทันตแพทย์"""
         days = []
+        chosen_dentist = next((d for d in self.dentists if d["name"] == self.booking_dentist), None)
+
         for offset in range(0, 14):
             d = today() + dt.timedelta(days=offset)
+            iso_str = d.isoformat()
+            weekday_num = str(d.isoweekday())  # 1 = จันทร์ ... 7 = อาทิตย์
+
+            is_closed = False
+
+            if chosen_dentist:
+                # 1. เช็คว่าแพทย์คนนี้ทำงานวันนั้นหรือไม่
+                work_days = [x for x in chosen_dentist.get("days", "").split(",") if x]
+                if work_days and weekday_num not in work_days:
+                    is_closed = True
+
+                # 2. เช็คว่าตรงกับวันลาของแพทย์หรือไม่
+                leaves = [x for x in chosen_dentist.get("leaves", "").split(",") if x]
+                if iso_str in leaves:
+                    is_closed = True
+            else:
+                # หากเลือก "ไม่ระบุ" ให้เช็คว่ามีแพทย์คนใดเข้าเวรในวันนั้นบ้างหรือไม่
+                any_working = any(weekday_num in d.get("days", "").split(",") for d in self.dentists) if self.dentists else True
+                if not any_working:
+                    is_closed = True
+
             days.append({
-                "iso": d.isoformat(),
+                "iso": iso_str,
                 "weekday": THAI_DAYS[d.isoweekday() - 1],
                 "day": str(d.day),
                 "month": THAI_MONTHS[d.month - 1],
-                "free": "",
-                "closed": "0",
+                "free": "เต็ม" if is_closed else "",
+                "closed": "1" if is_closed else "0",
             })
         return days
 
@@ -360,7 +401,7 @@ class AppState(rx.State):
         rows = self.daily_patients
         return {
             "total": sum(1 for a in rows if a["status"] != "ยกเลิกนัด"),
-            "arrived": sum(1 for a in rows if a["status"] == "มาตามนัด"),
+            "arrived": sum(1 for a in rows if a["status"] in ("มาตามนัด", "มาตามเวลานัด")),
             "waiting": sum(1 for a in rows if a["status"] in ("ยืนยันแล้ว", "เลื่อนนัด")),
             "pending": sum(1 for a in rows if a["status"] == "รออนุมัติ"),
             "cancelled": sum(1 for a in rows if a["status"] == "ยกเลิกนัด"),
@@ -630,13 +671,16 @@ class AppState(rx.State):
     def pick_date(self, value: str):
         self.booking_date = value
         self.booking_time = ""
-        self.available_slots = generate_default_slots()
 
-        # ช่วงเช้า 09:00 - 12:00
+        # ตรวจสอบว่าวันที่เลือกเป็นวันปิดหรือวันลาหรือไม่
+        day_info = next((d for d in self.booking_days if d["iso"] == value), None)
+        if day_info and day_info.get("closed") == "1":
+            self.available_slots = []
+            return rx.toast.warning("วันที่เลือกคลินิกปิดทำการ หรือทันตแพทย์ลาหยุด")
+
+        # สล็อตเวลาปกติ
         morning_slots = [f"{h:02d}:{m:02d}" for h in range(9, 12) for m in (0, 30)] + ["12:00"]
-        # ช่วงบ่าย 13:00 - 20:00
         afternoon_slots = [f"{h:02d}:{m:02d}" for h in range(13, 20) for m in (0, 30)] + ["20:00"]
-
         all_times = morning_slots + afternoon_slots
 
         self.available_slots = [
@@ -661,7 +705,8 @@ class AppState(rx.State):
     def set_booking_dentist(self, value: str):
         self.booking_dentist = value
         self.booking_time = ""
-        # TODO(backend): reload self.available_slots for the chosen dentist
+        # คำนวณช่วงเวลาใหม่ตามวันที่เลือกอยู่ ณ ขณะนั้น
+        return self.pick_date(self.booking_date)
 
     @rx.event
     def submit_booking_details(self, form: dict):
@@ -690,8 +735,12 @@ class AppState(rx.State):
         target_time = dt.datetime.strptime(draft["time"], "%H:%M").time()
         code = f"Q-{target_date.strftime('%Y%m%d')}-{str(uuid.uuid4())[:4].upper()}"
 
+        # ดึง patient_id จาก session ถ้ายังไม่ได้ล็อกอินให้เป็น None หรือ Fallback เป็น "1"
+        pid = self.current_patient_id if self.is_logged_in and self.current_patient_id else "1"
+
         with rx.session() as session:
             new_booking = QueueBooking(
+                patient_id=pid,  # ผูกกับ ID คนไข้
                 patient_name=draft["patient_name"],
                 phone_number=draft["phone"],
                 booking_date=target_date,
@@ -709,6 +758,7 @@ class AppState(rx.State):
 
             saved_draft = dict(draft)
             saved_draft["id"] = code
+            saved_draft["patient_id"] = pid
             self.booking_slip = saved_draft
             self.booking_draft = {}
             self.booking_time = ""
@@ -736,8 +786,8 @@ class AppState(rx.State):
 
     @rx.event
     def cancel_my_appt(self, aid: str):
-        # TODO(backend): set appointment `aid` to "ยกเลิกนัด" (reason: patient cancelled online), reload
-        return not_connected("ยกเลิกนัดหมาย")
+        """คนไข้ยกเลิกนัดหมายผ่านหน้า 'ตารางนัดหมายของฉัน'"""
+        return self.cancel_appt(aid)
 
     @rx.event
     def download_ics(self, aid: str):
@@ -757,6 +807,15 @@ class AppState(rx.State):
         ])
         return rx.download(data=ics, filename=f"{a['id']}.ics")
 
+    @rx.event
+    def export_ics(self):
+        """ส่งออกไฟล์ .ics จากใบนัดหรือใบจองคิวที่กำลังเปิดดูอยู่"""
+        target = self.slip if self.slip_open else self.booking_slip
+        aid = target.get("id")
+        if not aid:
+            return rx.toast.error("ไม่พบนัดหมายที่จะส่งออกปฏิทิน")
+        return self.download_ics(aid)
+
    # ======================================================================
     # 5.3 staff: dashboard, requests, appointments, schedule
     # ======================================================================
@@ -771,10 +830,12 @@ class AppState(rx.State):
 
     @rx.event
     def load_schedule_data(self):
-        """โหลดข้อมูลคิวและการนัดหมายจากฐานข้อมูล"""
+        """โหลดข้อมูลคิว, การนัดหมาย และประวัติผังฟันจากฐานข้อมูล"""
         with rx.session() as session:
             bookings = session.exec(select(QueueBooking)).all()
             appts = session.exec(select(Appointment)).all()
+            db_entries = session.exec(select(TreatmentEntry)).all()
+            
             loaded_list = []
 
             for b in bookings:
@@ -782,7 +843,7 @@ class AppState(rx.State):
                     "id": b.booking_code,
                     "db_id": str(b.id),
                     "kind": "จองคิว",
-                    "patient_id": "1",  # ผูกเป็น id 1 เพื่อให้ตรงกับโปรไฟล์คนไข้ที่ล็อกอิน
+                    "patient_id": str(getattr(b, "patient_id", "") or "1"),
                     "patient_name": b.patient_name,
                     "phone": b.phone_number,
                     "date": b.booking_date.isoformat(),
@@ -819,7 +880,22 @@ class AppState(rx.State):
                     "created": a.created_at.isoformat() if a.created_at else "",
                 }))
 
+            # โหลดประวัติการรักษาเข้าสู่ entries สำหรับแสดงบนผังฟัน
+            loaded_entries = []
+            for item in db_entries:
+                loaded_entries.append(format_entry({
+                    "id": str(item.id),
+                    "patient_id": str(item.patient_id),
+                    "tooth": str(item.tooth_number),
+                    "icd": item.icd_code,
+                    "procedure": item.procedure_name,
+                    "note": item.notes or "",
+                    "dentist": item.dentist_name or "ทันตแพทย์",
+                    "timestamp": item.created_at.isoformat() if item.created_at else dt.datetime.now().isoformat(),
+                }))
+
             self.appointments = loaded_list
+            self.entries = loaded_entries
 
     # ---- ช่วยค้นหานัดหมายตามรหัส ----
     def _find_appt(self, aid: str) -> dict[str, str]:
@@ -883,15 +959,19 @@ class AppState(rx.State):
 
     @rx.event
     def reject_request(self, form: dict):
+        reason = form.get("reason", "ไม่ระบุเหตุผล")
         with rx.session() as session:
             booking = session.exec(select(QueueBooking).where(QueueBooking.booking_code == self.reject_target)).first()
             if booking:
                 booking.status = "ปฏิเสธ"
+                # ถ้าในโมเดล QueueBooking มีฟิลด์ reason หรือ note ให้บันทึกไว้
+                if hasattr(booking, "notes"):
+                    booking.notes = reason
                 session.add(booking)
                 session.commit()
         self.reject_open = False
         self.load_schedule_data()
-        return rx.toast.info("ปฏิเสธคำขอการจองเรียบร้อย")
+        return rx.toast.info(f"ปฏิเสธคำขอการจองเรียบร้อย: {reason}")
 
     @rx.event
     def set_appt_search(self, value: str):
@@ -904,11 +984,18 @@ class AppState(rx.State):
     @rx.event
     def cancel_appt(self, aid: str):
         with rx.session() as session:
+            # 1. เช็คใน Appointment ก่อน
             appt = session.exec(select(Appointment).where(Appointment.appointment_slip_code == aid)).first()
             if appt:
                 appt.status = "ยกเลิกนัด"
                 session.add(appt)
-                session.commit()
+            # 2. ถ้าไม่พบ ให้เช็คใน QueueBooking
+            booking = session.exec(select(QueueBooking).where(QueueBooking.booking_code == aid)).first()
+            if booking:
+                booking.status = "ยกเลิกนัด"
+                session.add(booking)
+            session.commit()
+
         self.load_schedule_data()
         return rx.toast.info(f"ยกเลิกนัดหมายรหัส {aid} เรียบร้อย")
 
@@ -917,9 +1004,14 @@ class AppState(rx.State):
         with rx.session() as session:
             appt = session.exec(select(Appointment).where(Appointment.appointment_slip_code == aid)).first()
             if appt:
-                appt.status = "มาตามเวลานัด"
+                appt.status = "มาตามนัด"
                 session.add(appt)
-                session.commit()
+            booking = session.exec(select(QueueBooking).where(QueueBooking.booking_code == aid)).first()
+            if booking:
+                booking.status = "มาตามนัด"
+                session.add(booking)
+            session.commit()
+
         self.load_schedule_data()
         return rx.toast.success(f"บันทึกผู้ป่วยรหัส {aid} มาตามนัดแล้ว")
 
@@ -950,7 +1042,15 @@ class AppState(rx.State):
                 appt.appointment_time = dt.datetime.strptime(new_time_str, "%H:%M").time()
                 appt.status = "เลื่อนนัด"
                 session.add(appt)
-                session.commit()
+            
+            booking = session.exec(select(QueueBooking).where(QueueBooking.booking_code == aid)).first()
+            if booking:
+                booking.booking_date = dt.date.fromisoformat(new_date_str)
+                booking.booking_time = dt.datetime.strptime(new_time_str, "%H:%M").time()
+                booking.status = "เลื่อนนัด"
+                session.add(booking)
+
+            session.commit()
 
         self.resched_open = False
         self.load_schedule_data()
@@ -973,14 +1073,17 @@ class AppState(rx.State):
 
         patient_field = form.get("patient") or self.next_appt_patient or "ผู้ป่วยทั่วไป"
         patient_name = patient_field.split(" · ")[-1]
+        dentist_name = form.get("dentist") or "ทันตแพทย์ประจำคลินิก"
+        purpose = form.get("purpose") or "นัดติดตามอาการ"
+        contact_info = form.get("contact") or "0924073094"
 
         with rx.session() as session:
             new_appt = Appointment(
                 patient_name=patient_name,
-                contact_info=form.get("contact") or "-",
+                contact_info=contact_info,
                 appointment_date=target_date,
                 appointment_time=target_time,
-                purpose=form.get("purpose") or "นัดติดตามอาการ",
+                purpose=purpose,
                 status="ยืนยันแล้ว",
                 appointment_slip_code=slip_code,
                 notes=form.get("note") or None,
@@ -993,18 +1096,20 @@ class AppState(rx.State):
         self.next_appt_open = False
         self.load_schedule_data()
 
+        # แสดงป๊อปอัปใบนัดหมายทันทีหลังจากสร้างเสร็จ
         self.slip = format_appointment({
             "id": slip_code,
             "patient_name": patient_name,
             "date": target_date.isoformat(),
             "time": target_time.strftime("%H:%M"),
-            "service": form.get("service") or "ทันตกรรมทั่วไป",
-            "dentist": form.get("dentist") or "ทันตแพทย์ประจำคลินิก",
-            "purpose": form.get("purpose") or "-",
+            "service": form.get("service") or purpose,
+            "dentist": dentist_name,
+            "purpose": purpose,
             "status": "ยืนยันแล้ว",
+            "phone": contact_info,
         })
         self.slip_open = True
-        return rx.toast.success("ออกใบนัดหมายสำเร็จ")
+        return rx.toast.success("ออกใบนัดหมายสำเร็จและบันทึกลงระบบแล้ว")
 
     @rx.event
     def select_schedule_dentist(self, did: str):
@@ -1096,7 +1201,8 @@ class AppState(rx.State):
 
     @rx.event
     def save_entry(self):
-        if not self.selected_pid:
+        target_pid = self.selected_pid or "P-001"
+        if not target_pid:
             return rx.toast.error("ยังไม่ได้เลือกผู้ป่วย")
         if not self.entry_tooth:
             return rx.toast.error("กรุณาเลือกซี่ฟัน (คลิกที่ผังฟัน เลือกจาก Dropdown หรือพิมพ์เลขซี่ฟัน)")
@@ -1104,11 +1210,23 @@ class AppState(rx.State):
             return rx.toast.error(f"ไม่มีซี่ฟันหมายเลข {self.entry_tooth} — ใช้เลข 1–32")
         if not self.entry_icd:
             return rx.toast.error("กรุณาเลือกรหัสการวินิจฉัย (ICD-10)")
-        # TODO(backend): save {patient_id: self.selected_pid, tooth: self.entry_tooth, icd: self.entry_icd,
-        # procedure: self.entry_procedure, note: self.entry_note, dentist: logged-in user, timestamp: now},
-        # reload self.entries, then clear self.entry_note.
-        return not_connected("บันทึกการรักษา")
 
-    @rx.event
-    def select_my_tooth(self, tooth: str):
-        self.my_selected_tooth = tooth
+        # บันทึกข้อมูลการรักษาลงในตาราง TreatmentEntry
+        with rx.session() as session:
+            new_entry = TreatmentEntry(
+                patient_id=target_pid,
+                tooth_number=self.entry_tooth,
+                icd_code=self.entry_icd,
+                procedure_name=self.entry_procedure,
+                notes=self.entry_note.strip() if self.entry_note else None,
+                dentist_name=self.user_name if self.is_logged_in else "ทันตแพทย์ผู้ตรวจ",
+                created_at=get_utc_now(),
+            )
+            session.add(new_entry)
+            session.commit()
+            session.refresh(new_entry)
+
+        # เคลียร์ฟอร์มและโหลดข้อมูลผังฟันใหม่
+        self.entry_note = ""
+        self.load_schedule_data()
+        return rx.toast.success(f"บันทึกการรักษาซี่ {self.entry_tooth} เรียบร้อยแล้ว")

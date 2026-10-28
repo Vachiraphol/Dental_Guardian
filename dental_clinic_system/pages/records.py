@@ -95,7 +95,7 @@ def entry_form() -> rx.Component:
     )
 
 
-@rx.page(route="/records", title="บันทึกการรักษาและผังฟัน - Dental Guardian")
+@rx.page(route="/records", title="บันทึกการรักษาและผังฟัน - Dental Guardian", on_load=AppState.load_schedule_data)
 def records() -> rx.Component:
     return staff_page(
         "records",

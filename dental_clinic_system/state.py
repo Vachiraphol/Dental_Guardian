@@ -166,7 +166,50 @@ def generate_default_slots() -> list[dict[str, str]]:
 
 class AppState(rx.State):
     # ---- data: TODO(backend) load these from the database (rows go through format_*)
-    patients: list[dict[str, str]] = []
+    patients: list[dict[str, str]] = [
+        format_patient({
+            "id": "P-001",
+            "first_name": "ปทิตญา",
+            "last_name": "ภูภิจคุณาเดชากร",
+            "gender": "หญิง",
+            "dob": "2006-08-25",
+            "national_id": "1-1002-00123-45-6",
+            "phone": "092-407-3094",
+            "email": "thakon.phukit@gmail.com",
+            "address": "กรุงเทพมหานคร",
+            "disease": "ไม่มี",
+            "allergy": "ไม่มี",
+            "registered": "2024-01-10",
+        }),
+        format_patient({
+            "id": "P-002",
+            "first_name": "ทดสอบ",
+            "last_name": "สมชาย",
+            "gender": "ชาย",
+            "dob": "1995-08-20",
+            "national_id": "1-1004-99887-11-2",
+            "phone": "081-234-5678",
+            "email": "somchai@example.com",
+            "address": "สมุทรปราการ",
+            "disease": "ความดันโลหิตสูง",
+            "allergy": "Penicillin",
+            "registered": "2024-02-01",
+        }),
+        format_patient({
+            "id": "P-003",
+            "first_name": "สมศรี",
+            "last_name": "มีฟันดี",
+            "gender": "หญิง",
+            "dob": "1998-11-03",
+            "national_id": "3-1005-00432-88-9",
+            "phone": "089-876-5432",
+            "email": "somsri@example.com",
+            "address": "นนทบุรี",
+            "disease": "ไม่มี",
+            "allergy": "ไม่มี",
+            "registered": "2024-02-15",
+        }),
+    ]
     dentists: list[dict[str, str]] = [
         {
             "id": "D-001",
@@ -196,7 +239,7 @@ class AppState(rx.State):
     user_role: str = "patient"
     user_name: str = "ปทิตญา ภูภิจคุณาเดชากร"
     user_email: str = "thakon.phukit@gmail.com"
-    current_patient_id: str = "1"
+    current_patient_id: str = "P-001"
     login_role: str = "patient"
     login_error: str = ""
     register_error: str = ""
@@ -483,7 +526,10 @@ class AppState(rx.State):
     @rx.var
     def selected_patient_option(self) -> str:
         p = self.selected_patient
-        return f"{p['id']} · {p['full_name']}" if p else ""
+        if not p:
+            return ""
+        name = p.get("full_name") or f"{p.get('first_name', '')} {p.get('last_name', '')}".strip()
+        return f"{p.get('id', '')} · {name}" if name else p.get("id", "")
 
     @rx.var
     def sel_entries(self) -> list[dict[str, str]]:
@@ -545,7 +591,12 @@ class AppState(rx.State):
     # customer side of the chart
     @rx.var
     def my_entries(self) -> list[dict[str, str]]:
-        return sorted((e for e in self.entries if e["patient_id"] == self.current_patient_id), key=lambda e: e["timestamp"], reverse=True)
+        valid_pids = {self.current_patient_id, self.current_patient_id.replace("P-00", "").replace("P-0", "").replace("P-", "")}
+        return sorted(
+            (e for e in self.entries if e["patient_id"] in valid_pids or e["patient_id"] == self.current_patient_id),
+            key=lambda e: e["timestamp"],
+            reverse=True,
+        )
 
     @rx.var
     def my_treated_teeth(self) -> list[str]:
@@ -1230,3 +1281,8 @@ class AppState(rx.State):
         self.entry_note = ""
         self.load_schedule_data()
         return rx.toast.success(f"บันทึกการรักษาซี่ {self.entry_tooth} เรียบร้อยแล้ว")
+    
+    @rx.event
+    def select_my_tooth(self, tooth: str):
+        """เลือก/ยกเลิกเลือกซี่ฟันในหน้าประวัติการรักษาของคนไข้ (/my-history)"""
+        self.my_selected_tooth = tooth

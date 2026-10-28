@@ -15,8 +15,11 @@ def day_button(d) -> rx.Component:
         rx.text(d["weekday"], size="1", color=rx.cond(selected, "white", "var(--slate-10)")),
         rx.text(d["day"], size="5", weight="bold", color=rx.cond(selected, "white", "var(--slate-12)")),
         rx.text(d["month"], size="1", color=rx.cond(selected, "white", "var(--slate-10)")),
-        rx.text(rx.cond(closed, "ปิด", rx.cond(d["free"] == "0", "เต็ม", rx.cond(d["free"] != "", "ว่าง " + d["free"], ""))), size="1",
-                color=rx.cond(selected, "white", rx.cond(closed | (d["free"] == "0"), "var(--red-10)", "var(--green-11)"))),
+        rx.text(
+            rx.cond(closed, "ปิด", rx.cond(d["free"] == "0", "เต็ม", rx.cond(d["free"] != "", "ว่าง " + d["free"], ""))),
+            size="1",
+            color=rx.cond(selected, "white", rx.cond(closed | (d["free"] == "0"), "var(--red-10)", "var(--green-11)")),
+        ),
         align="center",
         spacing="0",
         padding_y="10px",
@@ -55,7 +58,6 @@ def slot_button(s) -> rx.Component:
 def booking() -> rx.Component:
     me = AppState.me
     return public_page(
-        # TODO(backend): show login_required(...) instead when the visitor is not a logged-in patient
         rx.vstack(
             step_bar(1),
             rx.flex(
@@ -63,27 +65,58 @@ def booking() -> rx.Component:
                     card(
                         card_title("1. เลือกบริการและทันตแพทย์"),
                         rx.grid(
-                            field("บริการทางทันตกรรม", rx.select(SERVICES, value=AppState.booking_service,
-                                                                on_change=AppState.set_booking_service, size="3", width="100%")),
-                            field("ทันตแพทย์", rx.select(AppState.booking_dentist_options, value=AppState.booking_dentist,
-                                                        on_change=AppState.set_booking_dentist, size="3", width="100%")),
+                            field(
+                                "บริการทางทันตกรรม",
+                                rx.select(
+                                    SERVICES,
+                                    value=AppState.booking_service,
+                                    on_change=AppState.set_booking_service,
+                                    size="3",
+                                    width="100%",
+                                ),
+                            ),
+                            field(
+                                "ทันตแพทย์",
+                                rx.select(
+                                    AppState.booking_dentist_options,
+                                    value=AppState.booking_dentist,
+                                    on_change=AppState.set_booking_dentist,
+                                    size="3",
+                                    width="100%",
+                                ),
+                            ),
                             columns={"initial": "1", "sm": "2"},
                             spacing="3",
                             width="100%",
                         ),
                     ),
                     card(
-                        card_title("2. เลือกวัน (14 วันข้างหน้า)",
-                                   rx.text(AppState.booking_date_th, size="2", color="var(--primary-color)", weight="medium")),
-                        rx.grid(rx.foreach(AppState.booking_days, day_button),
-                                columns={"initial": "4", "sm": "7"}, spacing="2", width="100%"),
+                        card_title(
+                            "2. เลือกวัน (14 วันข้างหน้า)",
+                            rx.text(AppState.booking_date_th, size="2", color="var(--primary-color)", weight="medium"),
+                        ),
+                        rx.grid(
+                            rx.foreach(AppState.booking_days, day_button),
+                            columns={"initial": "4", "sm": "7"},
+                            spacing="2",
+                            width="100%",
+                        ),
                     ),
                     card(
                         card_title("3. เลือกช่วงเวลา"),
                         rx.cond(
                             AppState.booking_slots.length() > 0,
-                            rx.grid(rx.foreach(AppState.booking_slots, slot_button),
-                                    columns={"initial": "3", "sm": "5", "lg": "6"}, spacing="2", width="100%"),
+                            rx.vstack(
+                                rx.text("ช่วงเวลาให้บริการ (09:00 - 20:00 น.)", size="2", weight="bold", color="var(--slate-11)"),
+                                rx.grid(
+                                    rx.foreach(AppState.booking_slots, slot_button),
+                                    columns={"initial": "3", "sm": "4", "lg": "6"},
+                                    spacing="2",
+                                    width="100%",
+                                ),
+                                width="100%",
+                                spacing="3",
+                            ),
                             empty_state("คลินิกปิดหรือทันตแพทย์ไม่เข้าเวรในวันนี้ กรุณาเลือกวันอื่น", "calendar_x"),
                         ),
                     ),
@@ -99,8 +132,11 @@ def booking() -> rx.Component:
                             rx.box(
                                 rx.text("วันและเวลาที่เลือก", size="1", color="var(--slate-10)"),
                                 rx.text(AppState.booking_date_th, weight="bold"),
-                                rx.text(rx.cond(AppState.booking_time != "", "เวลา " + AppState.booking_time + " น.", "ยังไม่ได้เลือกเวลา"),
-                                        weight="bold", color=rx.cond(AppState.booking_time != "", "var(--primary-color)", "var(--red-10)")),
+                                rx.text(
+                                    rx.cond(AppState.booking_time != "", "เวลา " + AppState.booking_time + " น.", "ยังไม่ได้เลือกเวลา"),
+                                    weight="bold",
+                                    color=rx.cond(AppState.booking_time != "", "var(--primary-color)", "var(--red-10)"),
+                                ),
                                 padding="12px",
                                 border_radius="10px",
                                 background_color="var(--primary-light)",
@@ -111,8 +147,16 @@ def booking() -> rx.Component:
                             field("โรคประจำตัว", rx.input(name="disease", default_value=me["disease"], size="3", placeholder="ไม่มี")),
                             field("ยาที่แพ้", rx.input(name="allergy", default_value=me["allergy"], size="3", placeholder="ไม่มี")),
                             field("อาการ / หมายเหตุ", rx.text_area(name="note", rows="3", placeholder="เช่น ปวดฟันกรามล่างขวา")),
-                            rx.button("ถัดไป: สรุปการจอง", rx.icon(tag="arrow_right", size=16), type="submit", size="3",
-                                      width="100%", color_scheme="purple", radius="full", disabled=AppState.booking_time == ""),
+                            rx.button(
+                                "ถัดไป: สรุปการจอง",
+                                rx.icon(tag="arrow_right", size=16),
+                                type="submit",
+                                size="3",
+                                width="100%",
+                                color_scheme="purple",
+                                radius="full",
+                                disabled=AppState.booking_time == "",
+                            ),
                             width="100%",
                             spacing="3",
                         ),

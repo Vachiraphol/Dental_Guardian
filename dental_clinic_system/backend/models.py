@@ -1,13 +1,24 @@
 from datetime import date, time, datetime, timezone
 from typing import Optional
-import reflex as rx
-from sqlmodel import Field
+from sqlmodel import SQLModel, Field
 
 def get_utc_now():
     """ฟังก์ชันคืนค่าเวลาปัจจุบันแบบมี Timezone UTC"""
     return datetime.now(timezone.utc)
 
-class QueueBooking(rx.Model, table=True):
+# ----------------- SRS 5.4: Treatment Entry -----------------
+class TreatmentEntry(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    patient_id: str = Field(index=True)
+    tooth_number: str
+    icd_code: str
+    procedure_name: str
+    notes: Optional[str] = None
+    dentist_name: str
+    created_at: datetime = Field(default_factory=get_utc_now)
+
+# ----------------- SRS 5.3: Queue Booking -----------------
+class QueueBooking(SQLModel, table=True):
     """ตารางเก็บข้อมูลการจองคิวของผู้ป่วย"""
     id: Optional[int] = Field(default=None, primary_key=True)
     patient_name: str
@@ -21,7 +32,8 @@ class QueueBooking(rx.Model, table=True):
     booking_code: str = Field(unique=True, index=True)
     created_at: datetime = Field(default_factory=get_utc_now)
 
-class Appointment(rx.Model, table=True):
+# ----------------- SRS 5.3: Appointment -----------------
+class Appointment(SQLModel, table=True):
     """ตารางเก็บข้อมูลการนัดหมายครั้งถัดไป"""
     id: Optional[int] = Field(default=None, primary_key=True)
     patient_name: str

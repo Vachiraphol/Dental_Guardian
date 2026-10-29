@@ -8,15 +8,32 @@ venv/
 
 # Environment variables and secrets
 .env
+.env.*
+!.env.example
 
-# Reflex generated files
+# Reflex generated files & lock
 .web/
+reflex.lock/
 
 # Existing project-specific rules
 assets/external/
 .states
+
+# Database files (SQLite)
 *.db
-# Local / deployment files
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+reflex.db
+
+# Local / deployment / log files
 .DS_Store
+Thumbs.db
 reflex.log
 deploy.exp
+
+# IDE / Editor
+.vscode/
+.idea/

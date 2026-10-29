@@ -16,8 +16,12 @@ def stat(title: str, value, icon: str, color: str) -> rx.Component:
                 spacing="0",
             ),
             rx.spacer(),
-            rx.center(rx.icon(tag=icon, size=22, color=f"var(--{color}-9)"), background=f"var(--{color}-3)",
-                      padding="10px", border_radius="12px"),
+            rx.center(
+                rx.icon(tag=icon, size=22, color=f"var(--{color}-9)"),
+                background=f"var(--{color}-3)",
+                padding="10px",
+                border_radius="12px",
+            ),
             width="100%",
             align="center",
         ),
@@ -32,18 +36,33 @@ def row_actions(a) -> rx.Component:
             rx.link(rx.button("พิจารณา", size="1", color_scheme="amber"), href="/requests"),
             rx.cond(
                 (a["status"] == "ยืนยันแล้ว") | (a["status"] == "เลื่อนนัด"),
-                rx.button(rx.icon(tag="user_check", size=14), "มาตามนัด", size="1", color_scheme="green",
-                          on_click=AppState.mark_arrived(a["id"])),
+                rx.button(
+                    rx.icon(tag="user_check", size=14),
+                    "มาตามนัด",
+                    size="1",
+                    color_scheme="green",
+                    on_click=AppState.mark_arrived(a["id"]),
+                ),
             ),
         ),
         rx.cond(
             a["status"] == "มาตามนัด",
-            rx.button(rx.icon(tag="clipboard_pen", size=14), "บันทึกการรักษา", size="1", variant="soft",
-                      on_click=AppState.open_patient_record(a["patient_id"], "/records")),
+            rx.button(
+                rx.icon(tag="clipboard_pen", size=14),
+                "บันทึกการรักษา",
+                size="1",
+                variant="soft",
+                on_click=AppState.open_patient_record(a["patient_id"], "/records"),
+            ),
         ),
         rx.tooltip(
-            rx.icon_button(rx.icon(tag="file_text", size=14), size="1", variant="soft", color_scheme="gray",
-                           on_click=AppState.open_patient_record(a["patient_id"], "/records/summary")),
+            rx.icon_button(
+                rx.icon(tag="file_text", size=14),
+                size="1",
+                variant="soft",
+                color_scheme="gray",
+                on_click=AppState.open_patient_record(a["patient_id"], "/records/summary"),
+            ),
             content="ดูเวชระเบียน",
         ),
         spacing="2",
@@ -62,8 +81,13 @@ def patient_row(a) -> rx.Component:
                 spacing="1",
             )
         ),
-        rx.table.cell(rx.vstack(rx.text(a["service"], size="2"),
-                                rx.cond(a["purpose"] != "", rx.text(a["purpose"], size="1", color="var(--slate-10)")), spacing="0")),
+        rx.table.cell(
+            rx.vstack(
+                rx.text(a["service"], size="2"),
+                rx.cond(a["purpose"] != "", rx.text(a["purpose"], size="1", color="var(--slate-10)")),
+                spacing="0",
+            )
+        ),
         rx.table.cell(rx.cond(a["dentist"] != "", a["dentist"], rx.text("ยังไม่ระบุ", color="var(--slate-9)"))),
         rx.table.cell(rx.badge(a["kind"], variant="outline", color_scheme=rx.cond(a["kind"] == "นัดครั้งถัดไป", "purple", "cyan"))),
         rx.table.cell(status_badge(a["status"])),
@@ -98,7 +122,11 @@ def patient_card(a) -> rx.Component:
     )
 
 
-@rx.page(route="/dashboard", title="แดชบอร์ดผู้ป่วยรายวัน - Dental Guardian")
+@rx.page(
+    route="/dashboard",
+    title="แดชบอร์ดผู้ป่วยรายวัน - Dental Guardian",
+    on_load=[AppState.check_staff_access, AppState.load_schedule_data],
+)
 def dashboard() -> rx.Component:
     s = AppState.daily_stats
     return staff_page(
@@ -134,7 +162,12 @@ def dashboard() -> rx.Component:
                         table_wrap(
                             rx.table.root(
                                 rx.table.header(
-                                    rx.table.row(*[rx.table.column_header_cell(h) for h in ["เวลา", "ผู้ป่วย", "บริการ", "ทันตแพทย์", "ประเภท", "สถานะ", "จัดการ"]]),
+                                    rx.table.row(
+                                        *[
+                                            rx.table.column_header_cell(h)
+                                            for h in ["เวลา", "ผู้ป่วย", "บริการ", "ทันตแพทย์", "ประเภท", "สถานะ", "จัดการ"]
+                                        ]
+                                    ),
                                 ),
                                 rx.table.body(rx.foreach(AppState.daily_patients, patient_row)),
                                 width="100%",
@@ -143,8 +176,12 @@ def dashboard() -> rx.Component:
                         display=["none", "none", "block"],
                         width="100%",
                     ),
-                    rx.vstack(rx.foreach(AppState.daily_patients, patient_card), spacing="2", width="100%",
-                              display=["flex", "flex", "none"]),
+                    rx.vstack(
+                        rx.foreach(AppState.daily_patients, patient_card),
+                        spacing="2",
+                        width="100%",
+                        display=["flex", "flex", "none"],
+                    ),
                 ),
                 empty_state("ไม่มีผู้ป่วยในวันนี้", "calendar_x"),
             ),

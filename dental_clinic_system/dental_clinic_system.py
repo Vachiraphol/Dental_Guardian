@@ -1,3 +1,4 @@
+import os
 import reflex as rx
 from fastapi import FastAPI
 from starlette.responses import JSONResponse
@@ -6,45 +7,58 @@ from sqlmodel import select
 
 from .backend.models import User
 from .backend.api_auth import router_auth, router_patient
+
+try:
+    from .backend.api_auth import hash_password
+except ImportError:
+    import hashlib
+    def hash_password(pwd: str) -> str:
+        return hashlib.sha256(pwd.encode()).hexdigest()
+
 from . import pages  # noqa: F401
 
 
 def init_default_staff():
-    """สร้างบัญชีทันตแพทย์และผู้ช่วย รหัสผ่านจำง่ายสำหรับการทดสอบ"""
+    """โหลดข้อมูลบัญชีระบบจาก Environment Variable โดยไม่มีข้อมูลผู้ใช้ปรากฏในโค้ด"""
+    config_raw = os.getenv("DEFAULT_USERS_CONFIG", "")
+    if not config_raw:
+        return
+
     try:
         with rx.session() as session:
-            default_users = [
-                # ทันตแพทย์ 4 ท่าน
-                ("dentist@dental.com", "dentist1111", "ทพ. สมศักดิ์ รักฟัน", "dentist"),
-                ("dentist2@dental.com", "dentist2222", "ทพญ. พิมพา ยิ้มสวย", "dentist"),
-                ("dentist3@dental.com", "dentist3333", "ทพ. ชาญชัย สุขภาพดี", "dentist"),
-                ("dentist4@dental.com", "dentist4444", "ทพญ. ณิชา อารมณ์ดี", "dentist"),
-                # ผู้ช่วยทันตแพทย์ / เจ้าหน้าที่คิว
-                ("staff@dental.com", "staff1234", "น.ส. ใจดี ดูแลคิว (ผู้ช่วยทันตแพทย์)", "staff"),
-            ]
-            for email, pwd, name, role in default_users:
-                existing = session.exec(select(User).where(User.username == email)).first()
+            # แปลงข้อความคอนฟิกเป็นรายการบัญชี
+            user_entries = [entry.strip().split("|") for entry in config_raw.split(",") if entry.strip()]
+
+            for item in user_entries:
+                if len(item) != 4:
+                    continue
+                username, pwd_raw, full_name, role = item
+                pwd_hash = hash_password(pwd_raw)
+
+                existing = session.exec(select(User).where(User.username == username)).first()
                 if not existing:
                     session.add(
                         User(
-                            username=email,
-                            password_hash=pwd,
-                            full_name=name,
+                            username=username,
+                            password_hash=pwd_hash,
+                            full_name=full_name,
                             role=role,
                             is_active=True,
                         )
                     )
                 else:
-                    existing.password_hash = pwd
+                    existing.password_hash = pwd_hash
                     existing.role = role
-                    existing.full_name = name
+                    existing.full_name = full_name
                     session.add(existing)
 
             session.commit()
     except Exception:
         pass
 
+
 init_default_staff()
+
 
 class State(rx.State):
     """The app state."""
@@ -59,9 +73,8 @@ api_app = FastAPI(
     openapi_url="/openapi.json",
 )
 
-# ผูกเฉพาะโมดูลที่รับผิดชอบใน branch นี้
-api_app.include_router(router_auth)       # SRS 5.2
-api_app.include_router(router_patient)    # SRS 5.1
+api_app.include_router(router_auth)
+api_app.include_router(router_patient)
 
 
 # 2. Handler สำหรับหน้า root (/) ของ Backend พอร์ต 8000
@@ -92,4 +105,4 @@ app = rx.App(
         rx.el.link(rel="icon", type="image/png", href="/favicon.png"),
     ],
     api_transformer=setup_api,
-)
+) 

@@ -16,6 +16,6 @@ app = rx.App(
     stylesheets=["/styles.css"],
     head_components=[
         rx.el.link(rel="stylesheet", href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"),
-        rx.el.link(rel="icon", type="image/png", href="/favicon.png"),
+        rx.el.link(rel="icon", type="image/png", href="/logo.png"),
     ]
 )

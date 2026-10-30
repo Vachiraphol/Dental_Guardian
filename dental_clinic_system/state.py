@@ -562,8 +562,13 @@ class AppState(rx.State):
 
     @rx.var
     def booking_dentist_options(self) -> list[str]:
-        """แสดงตัวเลือก 'ไม่ระบุ' พร้อมรายชื่อทันตแพทย์ทุกคนในระบบ"""
-        names = []
+        try:
+            with rx.session() as session:
+                docs = session.exec(select(User).where(User.role == "dentist")).all()
+                return [d.full_name for d in docs] if docs else ["ไม่ระบุ"]
+        except Exception:
+            # กรณีที่ยังไม่ได้ migrate หรือกำลังคอมไพล์ schema
+            return ["ไม่ระบุ"]
 
         # 1. ดึงจากรายการทันตแพทย์ใน state
         if self.dentists:

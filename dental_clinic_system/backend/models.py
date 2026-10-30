@@ -10,18 +10,16 @@ def get_utc_now() -> dt.datetime:
 
 
 class User(SQLModel, table=True):
-    """ตารางเก็บข้อมูลบัญชีผู้ใช้งาน (คนไข้, หมอ, เจ้าหน้าที่, แอดมิน)"""
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(index=True, unique=True)
     password_hash: str
     full_name: str
-    role: str = "patient"  # "patient", "dentist", "staff", "admin"
+    role: str = "patient"
     is_active: bool = True
     created_at: dt.datetime = Field(default_factory=get_utc_now)
 
 
 class Patient(SQLModel, table=True):
-    """ตารางเก็บข้อมูลเวชระเบียนผู้ป่วย"""
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: Optional[int] = Field(default=None, foreign_key="user.id")
     hn_code: str = Field(index=True, unique=True)
@@ -39,28 +37,26 @@ class Patient(SQLModel, table=True):
 
 
 class DoctorSchedule(SQLModel, table=True):
-    """ตารางเก็บตารางงานของแพทย์ แยกตามแพทย์และรายเดือน"""
     id: Optional[int] = Field(default=None, primary_key=True)
-    dentist_id: str
+    dentist_id: str = Field(index=True)
     dentist_name: str
     schedule_month: str = "2026-10"
     work_days: str = "1,2,3,4,5"
     start_time: str = "09:00"
     end_time: str = "18:00"
     lunch_time: str = "12:00"
-    leaves: str = "[]"  # เก็บ JSON string ของวันหยุดพิเศษและรายละเอียด
+    leaves: str = "[]"
 
 
 class QueueBooking(SQLModel, table=True):
-    """ตารางเก็บคำขอจองคิวออนไลน์"""
     id: Optional[int] = Field(default=None, primary_key=True)
-    patient_id: Optional[str] = None
+    patient_id: Optional[str] = Field(default=None, index=True)
     patient_name: str
     phone_number: str
     booking_date: dt.date
     booking_time: dt.time
     service_type: str
-    dentist_name: Optional[str] = "ไม่ระบุ"  # <-- เพิ่มบรรทัดนี้
+    dentist_name: Optional[str] = "ไม่ระบุ"
     underlying_disease: Optional[str] = "ไม่มี"
     drug_allergy: Optional[str] = "ไม่มี"
     status: str = "รออนุมัติ"
@@ -70,7 +66,6 @@ class QueueBooking(SQLModel, table=True):
 
 
 class Appointment(SQLModel, table=True):
-    """ตารางเก็บการนัดหมายที่ยืนยันแล้ว / นัดติดตามอาการ"""
     id: Optional[int] = Field(default=None, primary_key=True)
     patient_id: Optional[str] = Field(default=None, index=True)
     patient_name: str
@@ -87,7 +82,6 @@ class Appointment(SQLModel, table=True):
 
 
 class TreatmentEntry(SQLModel, table=True):
-    """ตารางบันทึกประวัติการรักษาในผังฟัน (SRS 5.4)"""
     id: Optional[int] = Field(default=None, primary_key=True)
     patient_id: str = Field(index=True)
     tooth_number: str

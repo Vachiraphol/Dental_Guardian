@@ -9,9 +9,12 @@ venv/
 
 # Environment variables and secrets
 .env
+.env.*
+!.env.example
 
-# Reflex generated files
+# Reflex generated files & lock
 .web/
+reflex.lock/
 
 # Existing project-specific rules
 assets/external/

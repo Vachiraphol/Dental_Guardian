@@ -1912,4 +1912,4 @@ class AppState(rx.State):
         if self.my_selected_tooth == tooth:
             self.my_selected_tooth = ""
         else:
-            self.my_selected_tooth = tooth
+            self.my_selected_tooth = tooth 

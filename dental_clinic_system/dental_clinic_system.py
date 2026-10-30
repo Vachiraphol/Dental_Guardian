@@ -1,3 +1,4 @@
+import os
 import reflex as rx
 from fastapi import FastAPI
 from .backend.models import QueueBooking, Appointment, TreatmentEntry
@@ -37,13 +38,6 @@ class State(rx.State):
 
 # 2. ผูกเข้ากับ Reflex App ผ่าน api_transformer
 app = rx.App(
-    theme=rx.theme(
-        appearance="light",
-        has_background=True,
-        radius="large",
-        accent_color="purple",
-        font_family="Kanit",
-    ),
     stylesheets=["/styles.css"],
     head_components=[
         rx.el.link(rel="stylesheet", href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"),

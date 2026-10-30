@@ -42,8 +42,10 @@ def day_toggle(i: int, name: str) -> rx.Component:
     )
 
 
-def weekly_calendar_view() -> rx.Component:
-    """ปฏิทินตารางงาน 7 วัน (จันทร์-อาทิตย์) แสดงกรอบคนละสีตามวัน"""
+def monthly_calendar_view() -> rx.Component:
+    """ปฏิทินรายเดือนแบบตาราง 7 คอลัมน์ (จันทร์-อาทิตย์) แสดงวันที่ 1 ถึงวันสิ้นเดือนจริง"""
+    day_headers = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "อาทิตย์"]
+
     return card(
         rx.vstack(
             rx.hstack(
@@ -51,7 +53,7 @@ def weekly_calendar_view() -> rx.Component:
                 rx.heading(
                     rx.cond(
                         AppState.user_role == "dentist",
-                        "ตารางเวลาปฏิบัติงานประจำสัปดาห์ของคุณ",
+                        "ตารางเวลาปฏิบัติงานประจำเดือนของคุณ",
                         "ตารางเวลาปฏิบัติงานของ " + rx.cond(AppState.schedule_dentist.contains("name"), AppState.schedule_dentist["name"], "ทันตแพทย์"),
                     ),
                     size="4",
@@ -60,50 +62,78 @@ def weekly_calendar_view() -> rx.Component:
                 align="center",
                 spacing="2",
             ),
-            rx.text("ตารางเวลาเวรตรวจ จันทร์ - อาทิตย์ ประจำสัปดาห์", size="2", color="var(--slate-10)"),
+            rx.text(
+                "ตารางแสดงวันและเวลาปฏิบัติงานตลอดทั้งเดือน เรียงตามวันที่ 1 จนถึงสิ้นเดือน",
+                size="2",
+                color="var(--slate-10)",
+            ),
+            # หัวตาราง จันทร์ - อาทิตย์
             rx.grid(
-                rx.foreach(
-                    AppState.my_weekly_schedule,
-                    lambda item: rx.box(
-                        rx.vstack(
-                            rx.hstack(
-                                rx.badge(
-                                    item["day"],
-                                    size="2",
-                                    variant="solid",
-                                    style={"background_color": item["border"], "color": "#ffffff", "font_weight": "bold"},
-                                ),
-                                rx.spacer(),
-                                rx.cond(
-                                    item["is_work"] == "1",
-                                    rx.badge("เข้าเวร", color_scheme="green", variant="soft"),
-                                    rx.badge("หยุด", color_scheme="gray", variant="soft"),
-                                ),
-                                width="100%",
-                                align="center",
-                            ),
-                            rx.divider(margin_y="8px"),
-                            rx.text(
-                                rx.cond(item["is_work"] == "1", item["time"], "ไม่มีเวรตรวจ"),
-                                size="2",
-                                weight="bold",
-                                color=item["text_color"],
-                            ),
-                            spacing="2",
-                            width="100%",
-                        ),
-                        padding="14px",
-                        border_radius="14px",
-                        background_color=item["bg"],
-                        border=f"2px solid {item['border']}",
-                        box_shadow="0 2px 5px rgba(0,0,0,0.04)",
-                        width="100%",
-                    ),
-                ),
-                columns={"initial": "1", "sm": "2", "md": "4", "lg": "7"},
-                spacing="3",
+                *[
+                    rx.center(
+                        rx.text(d_name, weight="bold", size="2", color="var(--slate-11)"),
+                        padding_y="8px",
+                        background_color="var(--slate-3)",
+                        border_radius="8px",
+                    )
+                    for d_name in day_headers
+                ],
+                columns="7",
+                spacing="2",
                 width="100%",
                 margin_top="12px",
+            ),
+            # ช่องวันที่ 1 ถึง 28/29/30/31
+            rx.grid(
+                rx.foreach(
+                    AppState.monthly_calendar_days,
+                    lambda cell: rx.cond(
+                        cell["is_empty"],
+                        # ช่องว่างต้นเดือน
+                        rx.box(width="100%", height="84px"),
+                        # ช่องวันที่มีวันที่จริง
+                        rx.box(
+                            rx.vstack(
+                                rx.hstack(
+                                    rx.text(cell["day_num"], weight="bold", size="3", color="var(--slate-12)"),
+                                    rx.spacer(),
+                                    rx.cond(
+                                        cell["is_leave"],
+                                        rx.badge("ลาหยุด", color_scheme="red", variant="solid", size="1"),
+                                        rx.cond(
+                                            cell["is_work"] == "1",
+                                            rx.badge("เข้าเวร", color_scheme="green", variant="soft", size="1"),
+                                            rx.badge("หยุด", color_scheme="gray", variant="soft", size="1"),
+                                        ),
+                                    ),
+                                    width="100%",
+                                    align="center",
+                                ),
+                                rx.divider(margin_y="4px"),
+                                rx.cond(
+                                    cell["is_leave"],
+                                    rx.text(cell["leave_reason"], size="1", color="var(--red-9)", weight="medium", no_of_lines=1),
+                                    rx.cond(
+                                        cell["is_work"] == "1",
+                                        rx.text(cell["time"], size="1", weight="bold", color=cell["text_color"]),
+                                        rx.text("-", size="1", color="var(--slate-8)"),
+                                    ),
+                                ),
+                                spacing="1",
+                                width="100%",
+                            ),
+                            padding="10px",
+                            border_radius="10px",
+                            background_color=cell["bg"],
+                            border=f"1.5px solid {cell['border']}",
+                            width="100%",
+                            min_height="84px",
+                        ),
+                    ),
+                ),
+                columns="7",
+                spacing="2",
+                width="100%",
             ),
             width="100%",
             spacing="2",
@@ -115,7 +145,7 @@ def weekly_calendar_view() -> rx.Component:
 
 @rx.page(
     route="/schedule",
-    title="ตั้งค่าตารางเวลาทันตแพทย์ - Dental Guardian",
+    title="ตารางเวลาปฏิบัติงานทันตแพทย์ - Dental Guardian",
     on_load=[AppState.check_staff_access, AppState.load_schedule_data],
 )
 def schedule() -> rx.Component:
@@ -151,8 +181,8 @@ def schedule() -> rx.Component:
             spacing="2",
             margin_bottom="16px",
         ),
-        # 1. แสดงปฏิทินตารางงานแยกสี จันทร์-อาทิตย์ ให้ทันตแพทย์และเจ้าหน้าที่เห็นทันที
-        weekly_calendar_view(),
+        # 1. แสดงปฏิทินตารางงานแยกสี จันทร์-อาทิตย์ พร้อมวันที่จริง
+        monthly_calendar_view(),
         # 2. ส่วนตั้งค่า: แสดงเฉพาะเมื่อสตาฟหรือแอดมินเป็นคนล็อกอินเข้ามาจัดตาราง
         rx.cond(
             is_staff,
@@ -226,37 +256,37 @@ def schedule() -> rx.Component:
                         ),
                     ),
                     card(
-    card_title("วันลา / วันหยุดพิเศษ"),
-    rx.hstack(
-        rx.input(
-            type="date",
-            value=AppState.new_leave_date,
-            on_change=AppState.set_new_leave_date,
-            size="2",
-            width="170px",
-            custom_attrs={"min": AppState.today_iso},
-        ),
-        rx.input(
-            placeholder="รายละเอียด เช่น ลาพักร้อน, ประชุมสัมมนา",
-            value=AppState.new_leave_reason,
-            on_change=AppState.set_new_leave_reason,
-            size="2",
-            flex="1",
-        ),
-        rx.button(
-            rx.icon(tag="plus", size=14),
-            "เพิ่มวันหยุด",
-            variant="soft",
-            color_scheme="purple",
-            on_click=AppState.add_leave,
-            size="2",
-            white_space="nowrap",
-        ),
-        width="100%",
-        spacing="2",
-        align="center",
-        margin_bottom="12px",
-    ),
+                        card_title("วันลา / วันหยุดพิเศษ"),
+                        rx.hstack(
+                            rx.input(
+                                type="date",
+                                value=AppState.new_leave_date,
+                                on_change=AppState.set_new_leave_date,
+                                size="2",
+                                width="170px",
+                                custom_attrs={"min": AppState.today_iso},
+                            ),
+                            rx.input(
+                                placeholder="รายละเอียด เช่น ลาพักร้อน, ประชุมสัมมนา",
+                                value=AppState.new_leave_reason,
+                                on_change=AppState.set_new_leave_reason,
+                                size="2",
+                                flex="1",
+                            ),
+                            rx.button(
+                                rx.icon(tag="plus", size=14),
+                                "เพิ่มวันหยุด",
+                                variant="soft",
+                                color_scheme="purple",
+                                on_click=AppState.add_leave,
+                                size="2",
+                                white_space="nowrap",
+                            ),
+                            width="100%",
+                            spacing="2",
+                            align="center",
+                            margin_bottom="12px",
+                        ),
                         rx.cond(
                             AppState.schedule_leaves.length() > 0,
                             rx.flex(

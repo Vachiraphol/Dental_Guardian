@@ -12,6 +12,8 @@ See BACKEND_HANDOFF.md for the field list of each row.
 """
 
 import json
+import calendar
+import datetime
 import datetime as dt
 import uuid
 import reflex as rx
@@ -434,6 +436,52 @@ class AppState(rx.State):
             pass
 
         return False
+
+    @rx.var
+    def my_weekly_schedule(self) -> list[dict]:
+        """ดึงตารางเวร 7 วัน (จันทร์-อาทิตย์) ของทันตแพทย์ พร้อมวันที่จริง คืนค่าเป็น list[dict]"""
+        import datetime
+
+        # หาวันจันทร์ของสัปดาห์ปัจจุบัน (Monday = 0)
+        today = datetime.date.today()
+        start_of_week = today - datetime.timedelta(days=today.weekday())
+
+        thai_months = [
+            "", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+            "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
+        ]
+
+        days_info = [
+            {"day": "จันทร์", "day_num": "1", "bg": "#FEFCE8", "border": "#EAB308", "text_color": "#854D0E"},
+            {"day": "อังคาร", "day_num": "2", "bg": "#FDF2F8", "border": "#EC4899", "text_color": "#9D174D"},
+            {"day": "พุธ", "day_num": "3", "bg": "#F0FDF4", "border": "#22C55E", "text_color": "#166534"},
+            {"day": "พฤหัสบดี", "day_num": "4", "bg": "#FFF7ED", "border": "#F97316", "text_color": "#9A3412"},
+            {"day": "ศุกร์", "day_num": "5", "bg": "#F0F9FF", "border": "#0EA5E9", "text_color": "#075985"},
+            {"day": "เสาร์", "day_num": "6", "bg": "#FAF5FF", "border": "#A855F7", "text_color": "#6B21A8"},
+            {"day": "อาทิตย์", "day_num": "7", "bg": "#FEF2F2", "border": "#EF4444", "text_color": "#991B1B"},
+        ]
+
+        d = self.schedule_dentist
+        work_days = d.get("days", []) if isinstance(d, dict) else getattr(d, "days", [])
+        time_str = f"{d.get('start', '09:00')} - {d.get('end', '15:00')} น." if isinstance(d, dict) else f"{getattr(d, 'start', '09:00')} - {getattr(d, 'end', '15:00')} น."
+
+        result: list[dict] = []
+        for i, info in enumerate(days_info):
+            current_date = start_of_week + datetime.timedelta(days=i)
+            date_label = f"{current_date.day} {thai_months[current_date.month]}"
+            is_work = "1" if info["day_num"] in work_days else "0"
+
+            result.append({
+                "day": info["day"],
+                "date_label": date_label,
+                "is_work": is_work,
+                "time": time_str,
+                "bg": info["bg"],
+                "border": info["border"],
+                "text_color": info["text_color"],
+            })
+
+        return result
 
     # ======================================================================
     # computed: session
@@ -1547,40 +1595,91 @@ class AppState(rx.State):
             self.entries = loaded_entries
 
     @rx.var
-    def my_weekly_schedule(self) -> list[dict[str, str]]:
-        """สร้างข้อมูลตารางเวร 7 วัน (จันทร์-อาทิตย์) ของหมอที่กำลังล็อกอินหรือหมอที่เลือกดู"""
-        # หากล็อกอินเป็นหมอ ให้แสดงของตัวเอง หากเป็นสตาฟให้แสดงของหมอที่เลือก
-        target_name = self.user_name if self.user_role == "dentist" else self.schedule_dentist.get("name", "")
-        doc = next((d for d in self.dentists if d["name"] == target_name), None)
-        if not doc and self.dentists:
-            doc = self.dentists[0]
-        
-        work_days = [x for x in doc.get("days", "").split(",") if x] if doc else []
-        
-        # สีประจำวัน จันทร์-อาทิตย์
-        DAY_COLORS = [
-            {"day": "จันทร์", "num": "1", "color": "amber", "bg": "#fef9c3", "border": "#facc15", "text": "#854d0e"},
-            {"day": "อังคาร", "num": "2", "color": "pink", "bg": "#fce7f3", "border": "#f472b6", "text": "#9d174d"},
-            {"day": "พุธ", "num": "3", "color": "green", "bg": "#dcfce7", "border": "#4ade80", "text": "#166534"},
-            {"day": "พฤหัสบดี", "num": "4", "color": "orange", "bg": "#ffedd5", "border": "#fb923c", "text": "#9a3412"},
-            {"day": "ศุกร์", "num": "5", "color": "blue", "bg": "#e0f2fe", "border": "#38bdf8", "text": "#075985"},
-            {"day": "เสาร์", "num": "6", "color": "purple", "bg": "#f3e8ff", "border": "#c084fc", "text": "#6b21a8"},
-            {"day": "อาทิตย์", "num": "7", "color": "red", "bg": "#fee2e2", "border": "#f87171", "text": "#991b1b"},
-        ]
-        
-        result = []
-        for item in DAY_COLORS:
-            is_work = item["num"] in work_days
-            result.append({
-                "day": item["day"],
-                "status": "เข้าเวรตรวจ" if is_work else "วันหยุดตรวจ",
-                "time": f"{doc.get('start', '09:00')} - {doc.get('end', '18:00')} น." if is_work else "-",
-                "is_work": "1" if is_work else "0",
-                "bg": item["bg"],
-                "border": item["border"],
-                "text_color": item["text"],
+    def monthly_calendar_days(self) -> list[dict]:
+        """สร้างตารางปฏิทินรายเดือนเต็มรูปแบบ (มีช่องว่างต้นเดือน + วันที่ 1 ถึงสิ้นเดือน)."""
+        import calendar
+        import datetime
+
+        month_str = getattr(self, "schedule_selected_month", "") or "2026-10"
+        try:
+            year, month = map(int, month_str.split("-"))
+        except Exception:
+            year, month = 2026, 10
+
+        # วันแรกของเดือนเป็นวันอะไรในสัปดาห์ (0=Monday, 6=Sunday) และจำนวนวันในเดือนนั้น
+        first_weekday, num_days = calendar.monthrange(year, month)
+
+        # ข้อมูลทันตแพทย์ที่เลือก
+        d = self.schedule_dentist
+        work_days = d.get("days", []) if isinstance(d, dict) else getattr(d, "days", [])
+        time_str = (
+            f"{d.get('start', '09:00')} - {d.get('end', '15:00')} น."
+            if isinstance(d, dict)
+            else f"{getattr(d, 'start', '09:00')} - {getattr(d, 'end', '15:00')} น."
+        )
+
+        # ดึงรายการวันลาของเดือนนี้
+        leave_map = {}
+        for l in getattr(self, "schedule_leaves", []):
+            ldate = l.get("date", "") if isinstance(l, dict) else getattr(l, "date", "")
+            lreason = l.get("label", "ลาหยุด") if isinstance(l, dict) else getattr(l, "label", "ลาหยุด")
+            if ldate:
+                leave_map[ldate] = lreason
+
+        # สีประจำวัน จันทร์-อาทิตย์ (1-7)
+        day_styles = {
+            1: {"border": "#EAB308", "bg": "#FEFCE8", "text": "#854D0E", "name": "จันทร์"},
+            2: {"border": "#EC4899", "bg": "#FDF2F8", "text": "#9D174D", "name": "อังคาร"},
+            3: {"border": "#22C55E", "bg": "#F0FDF4", "text": "#166534", "name": "พุธ"},
+            4: {"border": "#F97316", "bg": "#FFF7ED", "text": "#9A3412", "name": "พฤหัสบดี"},
+            5: {"border": "#0EA5E9", "bg": "#F0F9FF", "text": "#075985", "name": "ศุกร์"},
+            6: {"border": "#A855F7", "bg": "#FAF5FF", "text": "#6B21A8", "name": "เสาร์"},
+            7: {"border": "#EF4444", "bg": "#FEF2F2", "text": "#991B1B", "name": "อาทิตย์"},
+        }
+
+        calendar_cells = []
+
+        # 1. ใส่ช่องว่างก่อนวันที่ 1 ของเดือนเพื่อให้ตรงกับวันในสัปดาห์
+        for _ in range(first_weekday):
+            calendar_cells.append({
+                "day_num": "",
+                "is_empty": True,
+                "is_work": "0",
+                "is_leave": False,
+                "leave_reason": "",
+                "time": "",
+                "bg": "transparent",
+                "border": "transparent",
+                "text_color": "transparent",
             })
-        return result
+
+        # 2. ใส่ตั้งแต่วันที่ 1 จนถึงวันสุดท้ายของเดือน (28, 29, 30 หรือ 31)
+        for day in range(1, num_days + 1):
+            date_obj = datetime.date(year, month, day)
+            # weekday: Monday=0, Sunday=6 -> แปลงเป็น 1-7
+            day_num_week = date_obj.weekday() + 1
+            date_iso = f"{year:04d}-{month:02d}-{day:02d}"
+
+            st = day_styles.get(day_num_week, day_styles[1])
+            is_work_regular = str(day_num_week) in work_days
+            is_leave = date_iso in leave_map
+
+            is_work_actual = "1" if (is_work_regular and not is_leave) else "0"
+
+            calendar_cells.append({
+                "day_num": str(day),
+                "date_iso": date_iso,
+                "is_empty": False,
+                "is_work": is_work_actual,
+                "is_leave": is_leave,
+                "leave_reason": leave_map.get(date_iso, ""),
+                "time": time_str,
+                "bg": st["bg"] if is_work_actual == "1" else "#F8FAFC",
+                "border": st["border"] if is_work_actual == "1" else "#E2E8F0",
+                "text_color": st["text"] if is_work_actual == "1" else "var(--slate-9)",
+            })
+
+        return calendar_cells
 
     # ---- ช่วยค้นหานัดหมายตามรหัส ----
     def _find_appt(self, aid: str) -> dict[str, str]:

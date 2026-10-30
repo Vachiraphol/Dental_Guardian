@@ -61,42 +61,52 @@ Dental_Guardian/
 
 ### 1. ดาวน์โหลดโปรเจกต์
 
-```bash
+```powershell
 git clone <REPOSITORY_URL>
 cd Dental_Guardian
 ```
 
 ### 2. สร้างสภาพแวดล้อม Python
 
+โปรเจกต์นี้ใช้ Python 3.12 เป็นเวอร์ชันที่แนะนำสำหรับ Environment ปัจจุบัน
+
 ```powershell
-py -3.14 -m venv .venv
+py -3.12 -m venv .venv
 ```
+
+> หากมี `.venv` อยู่แล้ว ไม่จำเป็นต้องสร้างใหม่ทุกครั้ง
 
 ### 3. เปิดใช้งานสภาพแวดล้อม
 
 ```powershell
-.venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 ```
 
 ### 4. ติดตั้งแพ็กเกจ
 
-```bash
+```powershell
 python -m pip install -r requirements.txt
 ```
 
 ### 5. ตั้งค่าตัวแปรแวดล้อม
 
-สร้างไฟล์ `.env` ตามตัวแปรที่โครงการต้องใช้ โดยอ้างอิงจาก `.env.example` หากมี
+หากโปรเจกต์ต้องใช้ Environment Variables ให้สร้างไฟล์ `.env` โดยอ้างอิงจาก `.env.example` และกำหนดค่าตามที่โปรเจกต์ต้องการ
 
 > ห้ามเผยแพร่รหัสผ่าน กุญแจ API หรือข้อมูลลับลง GitHub
 
 ### 6. เริ่มเปิดเว็บไซต์
 
-```bash
-python -m reflex run
+```powershell
+reflex run
 ```
 
 เปิด URL ที่แสดงใน Terminal เพื่อเข้าใช้งานเว็บไซต์
+
+หาก PowerShell ไม่พบคำสั่ง `reflex` ให้ลองใช้:
+
+```powershell
+.\.venv\Scripts\reflex.exe run
+```
 
 ## 👥 ทีมงานและหน้าที่ความรับผิดชอบ
 1. **[68030085] [นางสาวณัฏฐวรรรณ ช่างเก็บ]**

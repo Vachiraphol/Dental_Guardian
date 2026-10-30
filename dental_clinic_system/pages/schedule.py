@@ -115,7 +115,7 @@ def weekly_calendar_view() -> rx.Component:
 
 @rx.page(
     route="/schedule",
-    title="ตารางเวลาทันตแพทย์ - Dental Guardian",
+    title="ตั้งค่าตารางเวลาทันตแพทย์ - Dental Guardian",
     on_load=[AppState.check_staff_access, AppState.load_schedule_data],
 )
 def schedule() -> rx.Component:

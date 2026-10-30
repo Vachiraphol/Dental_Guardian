@@ -96,8 +96,15 @@ def member_menu(active: str) -> rx.Component:
                 )
                 for key, text, icon, href in MEMBER_MENU
             ],
-            rx.button(rx.icon(tag="log_out", size=14), "ออกจากระบบ", variant="ghost", color_scheme="red",
-                      on_click=AppState.logout, width="100%", margin_top="8px"),
+            rx.button(
+                rx.icon(tag="log_out", size=14),
+                "ออกจากระบบ",
+                variant="ghost",
+                color_scheme="red",
+                on_click=AppState.logout,
+                width="100%",
+                margin_top="8px",
+            ),
             spacing="1",
             width="100%",
         ),
@@ -139,11 +146,7 @@ def member_tabs(active: str) -> rx.Component:
 
 
 def member_page(active: str, *children: rx.Component) -> rx.Component:
-    """Customer account pages (SRS 5.2–5.4): side menu + content.
-
-    TODO(backend): only logged-in patients may see these pages — wrap the content in
-    rx.cond(AppState.is_patient, ..., login_required(...)) once login works.
-    """
+    """Customer account pages (SRS 5.2–5.4): side menu + content."""
     return public_page(
         rx.flex(
             rx.box(member_menu(active), width="260px", flex_shrink="0", display=["none", "none", "block"]),
@@ -158,30 +161,74 @@ def member_page(active: str, *children: rx.Component) -> rx.Component:
 
 
 def staff_page(active: str, *children: rx.Component) -> rx.Component:
-    """Staff pages (dentist / nurse): sidebar + content.
-
-    TODO(backend): only logged-in staff may see these pages — wrap in
-    rx.cond(AppState.is_staff, ..., public_page(login_required(...))) once login works.
-    """
-    return rx.flex(
-        sidebar(active),
-        mobile_topbar(active),
-        rx.box(
-            rx.vstack(
-                *children,
+    """Staff pages (dentist / nurse / admin): ป้องกันไม่ให้ผู้ป่วยและผู้ที่ไม่ได้ล็อกอินเข้าใช้งาน"""
+    return rx.cond(
+        # เงื่อนไข: ต้องล็อกอิน และมีบทบาทเป็น staff, dentist หรือ admin
+        AppState.is_logged_in & ((AppState.user_role == "staff") | (AppState.user_role == "dentist") | (AppState.user_role == "admin")),
+        # ถ้าสิทธิ์ถูกต้อง แสดง Layout สำหรับเจ้าหน้าที่ตามปกติ
+        rx.flex(
+            sidebar(active),
+            mobile_topbar(active),
+            rx.box(
+                rx.vstack(
+                    *children,
+                    width="100%",
+                    max_width="1200px",
+                    margin_x="auto",
+                    spacing="4",
+                    padding=["12px", "16px", "24px", "32px"],
+                ),
                 width="100%",
-                max_width="1200px",
-                margin_x="auto",
-                spacing="4",
-                padding=["12px", "16px", "24px", "32px"],
+                min_width="0",
+                min_height="100vh",
+                background_color="var(--slate-2)",
+                overflow_x="hidden",
             ),
             width="100%",
-            min_width="0",
-            min_height="100vh",
             background_color="var(--slate-2)",
-            overflow_x="hidden",
+            flex_direction=["column", "column", "row"],
         ),
-        width="100%",
-        background_color="var(--slate-2)",
-        flex_direction=["column", "column", "row"],
+        # ถ้าไม่มีสิทธิ์ แสดงหน้าแจ้งเตือน Access Denied
+        rx.box(
+            header(),
+            rx.center(
+                rx.card(
+                    rx.vstack(
+                        rx.icon(tag="shield_alert", size=48, color="var(--red-9)"),
+                        rx.heading("ไม่มีสิทธิ์เข้าถึงหน้านี้", size="6"),
+                        rx.text(
+                            "หน้านี้สงวนสิทธิ์สำหรับทันตแพทย์และเจ้าหน้าที่คลินิกเท่านั้น หากคุณเป็นผู้ป่วยกรุณาเข้าใช้งานผ่านหน้าสมาชิก",
+                            color="var(--slate-10)",
+                            align="center",
+                            max_width="420px",
+                        ),
+                        rx.hstack(
+                            rx.link(
+                                rx.button("กลับสู่หน้าหลัก", variant="soft", color_scheme="gray"),
+                                href="/",
+                            ),
+                            rx.link(
+                                rx.button("ไปที่หน้าข้อมูลส่วนตัว", color_scheme="purple"),
+                                href="/profile",
+                            ),
+                            spacing="3",
+                            margin_top="12px",
+                        ),
+                        align="center",
+                        spacing="3",
+                    ),
+                    padding="48px 32px",
+                    max_width="500px",
+                    width="100%",
+                    box_shadow="0 10px 30px rgba(0, 0, 0, 0.08)",
+                    border_radius="24px",
+                ),
+                width="100%",
+                padding_y="80px",
+                padding_x="16px",
+            ),
+            footer(),
+            background_color="white",
+            min_height="100vh",
+        ),
     )

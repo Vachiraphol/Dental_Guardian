@@ -21,7 +21,11 @@ def summary_stat(label: str, value) -> rx.Component:
     )
 
 
-@rx.page(route="/records/summary", title="สรุปประวัติเวชระเบียนรวม - Dental Guardian", on_load=AppState.load_schedule_data)
+@rx.page(
+    route="/records/summary",
+    title="สรุปประวัติเวชระเบียนรวม - Dental Guardian",
+    on_load=[AppState.check_staff_access, AppState.load_schedule_data, AppState.load_treatment_entries],
+)
 def records_summary() -> rx.Component:
     p = AppState.selected_patient
     s = AppState.sel_summary

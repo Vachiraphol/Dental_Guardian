@@ -60,9 +60,10 @@ class QueueBooking(SQLModel, table=True):
     booking_date: dt.date
     booking_time: dt.time
     service_type: str
+    dentist_name: Optional[str] = "ไม่ระบุ"  # <-- เพิ่มบรรทัดนี้
     underlying_disease: Optional[str] = "ไม่มี"
     drug_allergy: Optional[str] = "ไม่มี"
-    status: str = "รออนุมัติ"  # รออนุมัติ, ยืนยันแล้ว, ยกเลิกนัด, ปฏิเสธ, มาตามนัด
+    status: str = "รออนุมัติ"
     booking_code: str = Field(index=True, unique=True)
     notes: Optional[str] = None
     created_at: dt.datetime = Field(default_factory=get_utc_now)

@@ -5,30 +5,50 @@ def service_card(image_url: str, title: str, icon_tag: str) -> rx.Component:
     return rx.box(
         rx.box(
             rx.center(
-                rx.icon(tag=icon_tag, size=24, color="var(--primary-color)"),
+                rx.icon(tag=icon_tag, size=22, color="var(--primary-color)"),
                 position="absolute",
-                top="16px",
-                left="16px",
+                top="14px",
+                left="14px",
                 background_color="white",
-                padding="12px",
-                border_radius="16px",
-                box_shadow="0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                padding="10px",
+                border_radius="14px",
+                box_shadow="0 4px 10px rgba(0, 0, 0, 0.1)",
                 z_index="10",
             ),
-            rx.image(src=image_url, height={"initial": "180px", "md": "224px"}, width="100%", object_fit="cover", border_radius="16px"),
+            rx.image(
+                src=image_url,
+                height={"initial": "180px", "md": "220px"},
+                width="100%",
+                object_fit="cover",
+                border_radius="16px",
+            ),
             position="relative",
-            margin_bottom="20px",
+            width="100%",
+            height={"initial": "180px", "md": "220px"},
+            overflow="hidden",
+            border_radius="16px",
+            margin_bottom="16px",
         ),
         rx.center(
-            rx.text(title, weight="medium", size="5", color="var(--slate-12)", margin_bottom="8px"),
+            rx.text(
+                title,
+                weight="bold",
+                size="4",
+                color="var(--slate-12)",
+                text_align="center",
+            ),
+            height="48px",
+            width="100%",
         ),
-        padding={"initial": "16px", "md": "24px"},
+        padding={"initial": "14px", "md": "20px"},
         border_radius="24px",
         background_color="white",
-        box_shadow="0 10px 40px -10px rgba(0,0,0,0.08)",
+        box_shadow="0 8px 30px rgba(0,0,0,0.06)",
         class_name="hover-lift",
         width="100%",
-        flex_shrink="0",
+        display="flex",
+        flex_direction="column",
+        justify_content="space-between",
     )
 
 @rx.page(route="/", title="Dental Guardian - หน้าแรก")
@@ -41,7 +61,6 @@ def home() -> rx.Component:
                 rx.flex(
                     rx.vstack(
                         rx.heading(
-                            # each phrase stays on one line; wrapping only happens between them
                             rx.text.span("รอยยิ้มสวย", display="inline-block", white_space="nowrap", margin_right="0.3em"),
                             rx.text.span("เริ่มต้นที่นี่", display="inline-block", white_space="nowrap"),
                             size={"initial": "8", "md": "9"},
@@ -86,7 +105,6 @@ def home() -> rx.Component:
                             align="center",
                             wrap="wrap",
                         ),
-
                         align="start",
                         justify="center",
                         height="100%",
@@ -117,7 +135,6 @@ def home() -> rx.Component:
                     position="relative",
                     z_index="10",
                 ),
-                # Decorative background elements
                 rx.box(
                     position="absolute",
                     top="-5%",
@@ -155,18 +172,35 @@ def home() -> rx.Component:
             box_shadow="sm",
             margin_bottom="16px",
         ),
-
-        # Services Section (Simplified to match the plain look)
+        # Services Section
         rx.container(
             rx.center(
                 rx.vstack(
-                    rx.heading("บริการทางทันตกรรมของเรา", size={"initial": "6", "md": "8"}, weight="bold", color="var(--slate-12)",
-                               margin_bottom={"initial": "24px", "md": "48px"}, text_align="center", class_name="animate-fade-in-delayed"),
-                    # Services Grid
+                    rx.heading(
+                        "บริการทางทันตกรรมของเรา",
+                        size={"initial": "6", "md": "8"},
+                        weight="bold",
+                        color="var(--slate-12)",
+                        margin_bottom={"initial": "24px", "md": "48px"},
+                        text_align="center",
+                        class_name="animate-fade-in-delayed",
+                    ),
                     rx.grid(
-                        service_card("https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&q=80&w=400", "ตรวจสุขภาพ & เอกซเรย์", "activity"),
-                        service_card("https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&q=80&w=400", "ขูดหินปูน & ขัดฟัน", "wrench"),
-                        service_card("https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=400", "อุดฟัน & ถอนฟัน", "smile"),
+                        service_card(
+                            "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&q=80&w=400",
+                            "ตรวจสุขภาพ & เอกซเรย์",
+                            "activity",
+                        ),
+                        service_card(
+                            "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&q=80&w=400",
+                            "ขูดหินปูน & ขัดฟัน",
+                            "wrench",
+                        ),
+                        service_card(
+                            "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=400",
+                            "อุดฟัน & ถอนฟัน",
+                            "smile",
+                        ),
                         columns={"initial": "1", "sm": "2", "md": "3"},
                         spacing={"initial": "4", "md": "8"},
                         width="100%",
@@ -179,11 +213,10 @@ def home() -> rx.Component:
                 padding_top="32px",
                 padding_bottom={"initial": "40px", "md": "64px"},
                 padding_x={"initial": "4px", "md": "0"},
-                background_color="white", 
+                background_color="white",
                 id="services",
             ),
         ),
-        
         footer(),
         background_color="white",
         min_height="100vh",

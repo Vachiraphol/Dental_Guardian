@@ -668,10 +668,9 @@ class AppState(rx.State):
 
     @rx.var
     def available_slots(self) -> list[dict[str, str]]:
-        """คำนวณคิวว่างและช่วงเวลา โดยจะลดคิวลงเฉพาะเมื่อ 'ยืนยันการจอง' หรือ 'ออกใบนัดหมาย' แล้วเท่านั้น"""
+        """คำนวณคิวว่างและช่วงเวลา โดยหักลดจำนวนคิวที่ถูกจองแล้วอย่างแม่นยำ"""
         slots = []
         MAX_CAPACITY = 2  # คลินิกรองรับได้รอบละ 2 คิว
-
         STANDARD_BREAKS = {"12:00", "12:30", "17:30", "18:00"}
 
         try:
@@ -684,15 +683,15 @@ class AppState(rx.State):
             target_month = "2026-10"
 
         with rx.session() as session:
-            # 1. ดึงคิวออนไลน์เฉพาะรายการที่ได้รับการยืนยันแล้ว หรือคนไข้มาตามนัดแล้ว (ไม่รวม 'รออนุมัติ')
+            # 1. ดึงคิวออนไลน์ทั้งหมดในวันเดียวกัน ที่ไม่ใช่การยกเลิก/ปฏิเสธ
             confirmed_bookings = session.exec(
                 select(QueueBooking).where(
                     QueueBooking.booking_date == target_d,
-                    QueueBooking.status.in_(["ยืนยันแล้ว", "มาตามนัด", "มาตามเวลานัด"])
+                    QueueBooking.status.not_in(["ยกเลิก", "ยกเลิกนัด", "ปฏิเสธ"])
                 )
             ).all()
 
-            # 2. ดึงใบนัดหมาย (Appointment) ในวันเดียวกันที่ยังไม่ถูกยกเลิก
+            # 2. ดึงใบนัดหมาย (Appointment) ในวันเดียวกัน
             confirmed_appointments = session.exec(
                 select(Appointment).where(
                     Appointment.appointment_date == target_d,
@@ -712,7 +711,7 @@ class AppState(rx.State):
                 ).first()
 
             for slot_time in SLOT_TIMES:
-                # นับคิวจากคำขอจองคิวออนไลน์ที่ได้รับการอนุมัติแล้ว
+                # แปลงเวลาของ QueueBooking ให้อยู่ในรูปแบบ "HH:MM" เสมอเพื่อเปรียบเทียบ
                 count_from_queue = sum(
                     1 for b in confirmed_bookings
                     if (
@@ -721,12 +720,12 @@ class AppState(rx.State):
                     )
                     and (
                         is_unspecified 
-                        or getattr(b, "dentist_name", "") in ("", "ไม่ระบุ") 
+                        or getattr(b, "dentist_name", "") in ("", "ไม่ระบุ", None) 
                         or getattr(b, "dentist_name", "") == self.booking_dentist
                     )
                 )
 
-                # นับคิวจากการออกใบนัดหมายล่วงหน้า (Appointment)
+                # แปลงเวลาของ Appointment ให้อยู่ในรูปแบบ "HH:MM"
                 count_from_appt = sum(
                     1 for a in confirmed_appointments
                     if (
@@ -738,7 +737,7 @@ class AppState(rx.State):
                 booked_count = count_from_queue + count_from_appt
                 remain = max(0, MAX_CAPACITY - booked_count)
 
-                # ตรวจสอบเวลาทำการของคลินิกและตารางแพทย์
+                # ตรวจสอบเวลาทำการ
                 in_working_hours = True
                 if slot_time in STANDARD_BREAKS:
                     in_working_hours = False
@@ -1562,20 +1561,33 @@ class AppState(rx.State):
                 }))
 
             for a in appts:
+                matched_p = next(
+                    (p for p in self.patients if p.get("id") == a.patient_id or p.get("full_name") == a.patient_name),
+                    None
+                )
+                
+                # ค้นหาชื่อหมอที่รับผิดชอบเคสนี้จากประวัติการจองคิว
+                matched_doc = getattr(a, "dentist_name", None)
+                if not matched_doc or matched_doc in ("", "ทันตแพทย์ประจำคลินิก", "ไม่ระบุ"):
+                    for b in bookings:
+                        if (b.patient_name == a.patient_name or str(getattr(b, "patient_id", "")) == str(a.patient_id)) and getattr(b, "dentist_name", None) not in ("", "ไม่ระบุ", None):
+                            matched_doc = b.dentist_name
+                            break
+
                 loaded_list.append(format_appointment({
                     "id": a.appointment_slip_code,
                     "db_id": str(a.id),
                     "kind": "นัดหมาย",
-                    "patient_id": str(a.id),
+                    "patient_id": str(a.patient_id or a.id),
                     "patient_name": a.patient_name,
                     "phone": a.contact_info,
                     "date": a.appointment_date.isoformat(),
                     "time": a.appointment_time.strftime("%H:%M"),
                     "service": "ติดตามอาการ",
-                    "dentist": "ทันตแพทย์ประจำคลินิก",
+                    "dentist": matched_doc or "ทันตแพทย์ประจำคลินิก",
                     "status": a.status,
-                    "disease": "-",
-                    "allergy": "-",
+                    "disease": matched_p.get("disease", "ไม่มี") if matched_p else "-",
+                    "allergy": matched_p.get("allergy", "ไม่มี") if matched_p else "-",
                     "note": a.notes or "",
                     "purpose": a.purpose,
                     "reason": "",
@@ -1924,16 +1936,24 @@ class AppState(rx.State):
 
         patient_field = form.get("patient") or self.next_appt_patient or "ผู้ป่วยทั่วไป"
         patient_name = patient_field.split(" · ")[-1]
-        dentist_name = form.get("dentist") or "ทันตแพทย์ประจำคลินิก"
         purpose = form.get("purpose") or "นัดติดตามอาการ"
 
-        # 1. ค้นหาข้อมูลคนไข้จริงจาก self.patients เพื่อดึงเบอร์โทรและประวัติโรคประจำตัว/ยาที่แพ้
+        # 1. ค้นหาข้อมูลคนไข้จริงจาก self.patients
         matched_patient = next(
             (p for p in self.patients if p.get("full_name") == patient_name or p.get("id") in patient_field),
             None,
         )
 
-        # 2. ใช้เบอร์จากฟอร์ม -> ถ้าไม่มีให้ใช้เบอร์จริงของคนไข้ -> ถ้าไม่มีให้เว้นว่างหรือขีด "-"
+        # 2. ค้นหาชื่อหมอคนเดิมที่เคยตรวจ/ดูแลคนไข้รายนี้จากคิวล่าสุด
+        prev_dentist = ""
+        for item in reversed(self.appointments):
+            if (item.get("patient_name") == patient_name or item.get("patient_id") == (matched_patient.get("id") if matched_patient else "")) and item.get("dentist") not in ("", "ไม่ระบุ", "ทันตแพทย์ประจำคลินิก"):
+                prev_dentist = item.get("dentist")
+                break
+
+        # ถ้าในฟอร์มระบุหมอมา ให้ใช้ตามฟอร์ม ถ้าไม่มีให้ใช้หมอจากคิวเดิม
+        dentist_name = form.get("dentist") or prev_dentist or "ทันตแพทย์ประจำคลินิก"
+
         contact_info = (
             form.get("contact")
             or (matched_patient.get("phone") if matched_patient else "")
@@ -1957,6 +1977,10 @@ class AppState(rx.State):
                 notes=form.get("note") or None,
                 created_at=get_utc_now(),
             )
+            # ถ้าโมเดล Appointment มีฟิลด์ dentist_name ให้บันทึกลงฐานข้อมูลด้วย
+            if hasattr(new_appt, "dentist_name"):
+                new_appt.dentist_name = dentist_name
+
             session.add(new_appt)
             session.commit()
             session.refresh(new_appt)
@@ -1975,6 +1999,8 @@ class AppState(rx.State):
             "purpose": purpose,
             "status": "ยืนยันแล้ว",
             "phone": contact_info,
+            "disease": matched_patient.get("disease", "ไม่มี") if matched_patient else "ไม่มี",
+            "allergy": matched_patient.get("allergy", "ไม่มี") if matched_patient else "ไม่มี",
         })
         self.slip_open = True
         return rx.toast.success(f"ออกใบนัดหมายสำเร็จ (รหัส: {slip_code})")

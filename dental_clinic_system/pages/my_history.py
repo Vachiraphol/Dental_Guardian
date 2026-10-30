@@ -9,7 +9,7 @@ from dental_clinic_system.components.ui import card, card_title, empty_state, pa
 from dental_clinic_system.state import AppState
 
 
-@rx.page(route="/my-history", title="ประวัติการรักษา - Dental Guardian")
+@rx.page(route="/my-history", title="ประวัติการรักษา - Dental Guardian", on_load=AppState.load_schedule_data)
 def my_history() -> rx.Component:
     return member_page(
         "history",

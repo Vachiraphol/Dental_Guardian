@@ -1,9 +1,9 @@
 import reflex as rx
 from fastapi import FastAPI
 from .backend.models import QueueBooking, Appointment, TreatmentEntry
-from .backend.api_queue import router as queue_router  # Router สำหรับ 5.3
-from .backend.api import router as treatment_router        # แก้คำว่า routerter เป็น treatment_router
-from . import pages  # noqa: F401  (registers every @rx.page)
+from .backend.api_queue import router as queue_router
+from .backend.api import router as treatment_router
+from . import pages  # noqa: F401 (registers every @rx.page)
 
 # 1. ตั้งค่า FastAPI Instance พร้อม Swagger Docs
 fastapi_app = FastAPI(

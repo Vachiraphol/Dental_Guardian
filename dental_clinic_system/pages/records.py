@@ -6,10 +6,45 @@ from dental_clinic_system.components.dental_chart import dental_chart
 from dental_clinic_system.components.history import chart_badge, entry_item, patient_picker
 from dental_clinic_system.components.layout import staff_page
 from dental_clinic_system.components.ui import card, card_title, empty_state, field, page_header
-from dental_clinic_system.state import AppState, ICD10, PERMANENT_LOWER, PERMANENT_UPPER, PROCEDURES, tooth_label
+from dental_clinic_system.state import (
+    AppState,
+    ICD10,
+    PERMANENT_LOWER,
+    PERMANENT_UPPER,
+    PRIMARY_TEETH_LOWER,
+    PRIMARY_TEETH_UPPER,
+    PROCEDURES,
+    tooth_label,
+)
 
 
 def tooth_picker() -> rx.Component:
+    is_child = AppState.chart_mode == "child"
+
+    adult_select_content = rx.select.content(
+        rx.select.group(
+            rx.select.label("ขากรรไกรบน (16 ซี่)"),
+            *[rx.select.item(tooth_label(t), value=t) for t in PERMANENT_UPPER],
+        ),
+        rx.select.separator(),
+        rx.select.group(
+            rx.select.label("ขากรรไกรล่าง (16 ซี่)"),
+            *[rx.select.item(tooth_label(t), value=t) for t in PERMANENT_LOWER],
+        ),
+    )
+
+    child_select_content = rx.select.content(
+        rx.select.group(
+            rx.select.label("ขากรรไกรบน (ฟันน้ำนม 10 ซี่)"),
+            *[rx.select.item(tooth_label(t), value=t) for t in PRIMARY_TEETH_UPPER],
+        ),
+        rx.select.separator(),
+        rx.select.group(
+            rx.select.label("ขากรรไกรล่าง (ฟันน้ำนม 10 ซี่)"),
+            *[rx.select.item(tooth_label(t), value=t) for t in PRIMARY_TEETH_LOWER],
+        ),
+    )
+
     return rx.vstack(
         rx.hstack(
             rx.text("ซี่ฟัน", size="2", weight="medium"),
@@ -29,19 +64,19 @@ def tooth_picker() -> rx.Component:
             AppState.tooth_input_mode == "dropdown",
             rx.select.root(
                 rx.select.trigger(placeholder="เลือกซี่ฟัน หรือคลิกที่ผังฟัน", width="100%"),
-                rx.select.content(
-                    rx.select.group(rx.select.label("ขากรรไกรบน (16 ซี่)"),
-                                    *[rx.select.item(tooth_label(t), value=t) for t in PERMANENT_UPPER]),
-                    rx.select.separator(),
-                    rx.select.group(rx.select.label("ขากรรไกรล่าง (16 ซี่)"),
-                                    *[rx.select.item(tooth_label(t), value=t) for t in PERMANENT_LOWER]),
-                ),
+                rx.cond(is_child, child_select_content, adult_select_content),
                 value=AppState.entry_tooth,
                 on_change=AppState.set_entry_tooth,
                 size="3",
             ),
-            rx.input(placeholder="พิมพ์เลขซี่ฟัน 1–32 เช่น 19", value=AppState.entry_tooth,
-                     on_change=AppState.set_entry_tooth, size="3", max_length=2, width="100%"),
+            rx.input(
+                placeholder=rx.cond(is_child, "พิมพ์เลขซี่ฟันน้ำนม เช่น 51, 85", "พิมพ์เลขซี่ฟัน 11–48 เช่น 18"),
+                value=AppState.entry_tooth,
+                on_change=AppState.set_entry_tooth,
+                size="3",
+                max_length=2,
+                width="100%",
+            ),
         ),
         rx.text(AppState.entry_tooth_label, size="1", color="var(--primary-color)"),
         width="100%",
@@ -95,7 +130,7 @@ def entry_form() -> rx.Component:
     )
 
 
-@rx.page(route="/records", title="บันทึกการรักษาและผังฟัน - Dental Guardian", on_load=AppState.load_schedule_data)
+@rx.page(route="/records", title="บันทึกการรักษาและผังฟัน - Dental Guardian")
 def records() -> rx.Component:
     return staff_page(
         "records",
@@ -141,7 +176,6 @@ def records() -> rx.Component:
                         min_width="0",
                     ),
                     rx.box(entry_form(), flex="1", min_width="0", width="100%"),
-                    # side by side only when there is room for a readable chart
                     direction={"initial": "column", "lg": "row"},
                     gap="16px",
                     align="start",

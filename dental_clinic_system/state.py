@@ -65,33 +65,88 @@ ICD10 = [
 ]
 ICD10_TH = {code: th for code, th, _ in ICD10}
 
-# Tooth numbers 1–32, laid out as seen when facing the patient. Both rows read
-# left → right (patient's right → left): upper 1 → 16, lower 17 → 32, so each
-# lower tooth sits directly under the upper tooth with number - 16.
-PERMANENT_UPPER = [str(n) for n in range(1, 17)]
-PERMANENT_LOWER = [str(n) for n in range(17, 33)]
-ALL_TEETH = PERMANENT_UPPER + PERMANENT_LOWER  # the chart shows exactly these 32 teeth
-MOLARS = {"1", "2", "3", "14", "15", "16", "17", "18", "19", "30", "31", "32"}
 
-# position counted from the back of each half-arch: 1st = third molar ... 8th = central incisor
-_TOOTH_NAMES = ["ฟันกรามซี่ที่ 3", "ฟันกรามซี่ที่ 2", "ฟันกรามซี่ที่ 1", "ฟันกรามน้อยซี่ที่ 2",
-                "ฟันกรามน้อยซี่ที่ 1", "ฟันเขี้ยว", "ฟันตัดซี่ข้าง", "ฟันตัดซี่กลาง"]
+# รายการซี่ฟันแท้ (32 ซี่)
+PERMANENT_TEETH_UPPER = ["18", "17", "16", "15", "14", "13", "12", "11", "21", "22", "23", "24", "25", "26", "27", "28"]
+PERMANENT_TEETH_LOWER = ["48", "47", "46", "45", "44", "43", "42", "41", "31", "32", "33", "34", "35", "36", "37", "38"]
+PERMANENT_UPPER = PERMANENT_TEETH_UPPER
+PERMANENT_LOWER = PERMANENT_TEETH_LOWER
+
+# รายการซี่ฟันน้ำนม (20 ซี่)
+PRIMARY_TEETH_UPPER = ["55", "54", "53", "52", "51", "61", "62", "63", "64", "65"]
+PRIMARY_TEETH_LOWER = ["85", "84", "83", "82", "81", "71", "72", "73", "74", "75"]
+
+ALL_TEETH = PERMANENT_TEETH_UPPER + PERMANENT_TEETH_LOWER + PRIMARY_TEETH_UPPER + PRIMARY_TEETH_LOWER
+
+# ฟันกรามในระบบ FDI (ฟันแท้ลงท้ายด้วย 6, 7, 8 และฟันน้ำนมลงท้ายด้วย 4, 5)
+MOLARS = {
+    # ฟันกรามแท้
+    "16", "17", "18",
+    "26", "27", "28",
+    "36", "37", "38",
+    "46", "47", "48",
+    # ฟันกรามน้ำนม
+    "54", "55",
+    "64", "65",
+    "74", "75",
+    "84", "85",
+}
+
+# ทิศทาง/จตุภาค (เลขหลักแรกของ FDI)
+FDI_QUADRANTS = {
+    "1": ("บนขวา", False),
+    "2": ("บนซ้าย", False),
+    "3": ("ล่างซ้าย", False),
+    "4": ("ล่างขวา", False),
+    "5": ("บนขวา", True),
+    "6": ("บนซ้าย", True),
+    "7": ("ล่างซ้าย", True),
+    "8": ("ล่างขวา", True),
+}
+
+# ตำแหน่งซี่ฟันแท้ (เลขหลักที่สอง: 1-8 นับจากฟันหน้าตรงกลางไปด้านใน)
+PERMANENT_POSITION_NAMES = {
+    "1": "ฟันหน้าตรงกลาง",
+    "2": "ฟันหน้าด้านข้าง",
+    "3": "ฟันเขี้ยว",
+    "4": "ฟันกรามน้อยซี่หน้า",
+    "5": "ฟันกรามน้อยซี่หลัง",
+    "6": "ฟันกรามใหญ่",
+    "7": "ฟันกรามในสุด",
+    "8": "ฟันคุด",
+}
+
+# ตำแหน่งซี่ฟันน้ำนม (เลขหลักที่สอง: 1-5 นับจากฟันหน้าตรงกลางไปด้านใน)
+PRIMARY_POSITION_NAMES = {
+    "1": "ฟันหน้าตรงกลาง",
+    "2": "ฟันหน้าด้านข้าง",
+    "3": "ฟันเขี้ยว",
+    "4": "ฟันกรามซี่แรก",
+    "5": "ฟันกรามในสุด",
+}
 
 
 def tooth_label(tooth: str) -> str:
-    """'19' -> 'ซี่ 19 · ฟันกรามซี่ที่ 1 ล่างขวา'."""
+    """แปลงรหัส FDI สองหลัก เป็นป้ายชื่อแสดงผล เช่น:
+    - '48' -> 'ซี่ 48 · ฟันคุด ล่างขวา'
+    - '11' -> 'ซี่ 11 · ฟันหน้าตรงกลาง บนขวา'
+    - '51' -> 'ซี่ 51 · ฟันหน้าตรงกลาง บนขวา (ฟันน้ำนม)'
+    - '85' -> 'ซี่ 85 · ฟันกรามในสุด ล่างขวา (ฟันน้ำนม)'
+    """
     if tooth not in ALL_TEETH:
         return tooth or "-"
-    n = int(tooth)
-    if n <= 8:
-        name, side = _TOOTH_NAMES[n - 1], "บนขวา"
-    elif n <= 16:
-        name, side = _TOOTH_NAMES[16 - n], "บนซ้าย"
-    elif n <= 24:
-        name, side = _TOOTH_NAMES[n - 17], "ล่างขวา"
+
+    quad_code = tooth[0]
+    pos_code = tooth[1]
+
+    side, is_primary = FDI_QUADRANTS.get(quad_code, ("-", False))
+
+    if is_primary:
+        name = PRIMARY_POSITION_NAMES.get(pos_code, "ฟันน้ำนม")
+        return f"ซี่ {tooth} · {name} {side} (ฟันน้ำนม)"
     else:
-        name, side = _TOOTH_NAMES[32 - n], "ล่างซ้าย"
-    return f"ซี่ {tooth} · {name} {side}"
+        name = PERMANENT_POSITION_NAMES.get(pos_code, "ฟันแท้")
+        return f"ซี่ {tooth} · {name} {side}"
 
 
 APPT_STATUSES = ["รออนุมัติ", "ยืนยันแล้ว", "มาตามนัด", "เลื่อนนัด", "ยกเลิกนัด", "ปฏิเสธ"]
@@ -247,6 +302,138 @@ class AppState(rx.State):
     entry_procedure: str = PROCEDURES[0]
     entry_note: str = ""
     my_selected_tooth: str = ""
+
+    # --- ตัวแปรสำหรับผังฟัน (Dental Chart) ---
+    chart_mode: str = "adult"        # 'adult' (ฟันแท้) หรือ 'child' (ฟันน้ำนม)
+    selected_tooth: str = ""         # ซี่ฟันที่เลือก
+    my_selected_tooth: str = ""      # ซี่ฟันที่คนไข้เลือกดูในหน้า my_history
+
+    @rx.event
+    def set_chart_mode(self, mode: str):
+        """สลับระหว่างผังฟันแท้และผังฟันน้ำนมด้วยตนเองผ่าน Dropdown."""
+        self.chart_mode = mode
+        self.selected_tooth = ""
+        self.entry_tooth = ""
+
+    @rx.event
+    def select_tooth(self, tooth_num: str):
+        if self.selected_tooth == tooth_num:
+            self.selected_tooth = ""
+        else:
+            self.selected_tooth = tooth_num
+
+    @rx.event
+    def select_my_tooth(self, tooth_num: str):
+        if self.my_selected_tooth == tooth_num:
+            self.my_selected_tooth = ""
+        else:
+            self.my_selected_tooth = tooth_num
+
+    @rx.var
+    def active_teeth_upper(self) -> list[str]:
+        if self.chart_mode == "child":
+            return PRIMARY_TEETH_UPPER
+        return PERMANENT_TEETH_UPPER
+
+    @rx.var
+    def active_teeth_lower(self) -> list[str]:
+        if self.chart_mode == "child":
+            return PRIMARY_TEETH_LOWER
+        return PERMANENT_TEETH_LOWER
+
+    @rx.var
+    def selected_tooth_label(self) -> str:
+        """แปลงรหัสฟันที่หมอ/สตาฟเลือก เป็นข้อความอ่านง่าย"""
+        if not self.selected_tooth:
+            return ""
+        return tooth_label(self.selected_tooth)
+
+    @rx.var
+    def my_selected_tooth_label(self) -> str:
+        """แปลงรหัสฟันที่คนไข้เลือกใน my_history เป็นข้อความอ่านง่าย"""
+        if not self.my_selected_tooth:
+            return ""
+        return tooth_label(self.my_selected_tooth)
+
+    @rx.event
+    def set_selected_pid(self, pid: str):
+        self.selected_pid = pid
+        self.selected_tooth = ""
+        self.entry_tooth = ""
+        self.update_chart_mode_for_patient(pid)
+
+    def update_chart_mode_for_patient(self, pid: str):
+        """ตรวจสอบว่าคนไข้เป็นเคสเด็กหรือไม่ (จากอายุ < 12 ปี หรือมีการจองทันตกรรมเด็ก)"""
+        with rx.session() as session:
+            # 1. ตรวจสอบข้อมูลคนไข้ (อายุ)
+            pt = session.exec(
+                select(Patient).where(Patient.pid == pid)
+            ).first()
+            
+            is_kid = False
+            if pt and hasattr(pt, "age") and pt.age is not None:
+                try:
+                    if int(pt.age) <= 12:  # อายุไม่เกิน 12 ปี ให้เป็นฟันน้ำนม
+                        is_kid = True
+                except Exception:
+                    pass
+
+            # 2. ตรวจสอบจากประวัติการจองคิวล่าสุด
+            booking = session.exec(
+                select(QueueBooking)
+                .where(QueueBooking.patient_id == pid)
+                .order_by(QueueBooking.id.desc())
+            ).first()
+
+            if booking:
+                svc = str(booking.service or "")
+                note_text = str(booking.purpose or "") + str(booking.note or "")
+                if "เด็ก" in svc or "ฟันน้ำนม" in svc or "เด็ก" in note_text:
+                    is_kid = True
+
+            # สลับโหมด
+            if is_kid:
+                self.chart_mode = "child"
+            else:
+                self.chart_mode = "adult"
+
+    @rx.var
+    def is_child_case(self) -> bool:
+        """ตรวจสอบว่าคนไข้ปัจจุบันเป็นเคสเด็กหรือไม่ (จากอายุ <= 12 ปี หรือจองคิวทันตกรรมเด็ก)."""
+        pid = getattr(self, "selected_pid", "")
+        if not pid:
+            return False
+
+        try:
+            with rx.session() as session:
+                # 1. เช็กอายุจากตาราง Patient โดยตรง
+                pt = session.exec(
+                    select(Patient).where(Patient.pid == pid)
+                ).first()
+                if pt and hasattr(pt, "age") and pt.age is not None:
+                    try:
+                        if int(pt.age) <= 12:
+                            return True
+                    except (ValueError, TypeError):
+                        pass
+
+                # 2. เช็กจากการจองคิวใน QueueBooking ของคนไข้รายนี้
+                booking = session.exec(
+                    select(QueueBooking)
+                    .where(QueueBooking.patient_id == pid)
+                    .order_by(QueueBooking.id.desc())
+                ).first()
+                if booking:
+                    svc = str(getattr(booking, "service", "") or "")
+                    purpose = str(getattr(booking, "purpose", "") or "")
+                    note = str(getattr(booking, "note", "") or "")
+                    text = f"{svc} {purpose} {note}"
+                    if "เด็ก" in text or "ฟันน้ำนม" in text:
+                        return True
+        except Exception:
+            pass
+
+        return False
 
     # ======================================================================
     # computed: session
@@ -428,16 +615,15 @@ class AppState(rx.State):
 
     @rx.var
     def available_slots(self) -> list[dict[str, str]]:
-        """คำนวณคิวว่างและช่วงเวลา โดยล็อคเวลาพักมาตรฐาน (12:00, 12:30, 17:30, 18:00)"""
+        """คำนวณคิวว่างและช่วงเวลา โดยจะลดคิวลงเฉพาะเมื่อ 'ยืนยันการจอง' หรือ 'ออกใบนัดหมาย' แล้วเท่านั้น"""
         slots = []
         MAX_CAPACITY = 2  # คลินิกรองรับได้รอบละ 2 คิว
 
-        # กำหนดช่วงเวลาพักมาตรฐานของแพทย์ทุกคน
         STANDARD_BREAKS = {"12:00", "12:30", "17:30", "18:00"}
 
         try:
             target_d = dt.date.fromisoformat(self.booking_date)
-            weekday_str = str(target_d.isoweekday())  # 1=จันทร์ ... 7=อาทิตย์
+            weekday_str = str(target_d.isoweekday())
             target_month = target_d.strftime("%Y-%m")
         except Exception:
             target_d = today()
@@ -445,15 +631,22 @@ class AppState(rx.State):
             target_month = "2026-10"
 
         with rx.session() as session:
-            # 1. ดึงข้อมูลการจองจริงในวันนั้น (ยกเว้นที่มีการยกเลิก/ปฏิเสธ)
-            active_bookings = session.exec(
+            # 1. ดึงคิวออนไลน์เฉพาะรายการที่ได้รับการยืนยันแล้ว หรือคนไข้มาตามนัดแล้ว (ไม่รวม 'รออนุมัติ')
+            confirmed_bookings = session.exec(
                 select(QueueBooking).where(
                     QueueBooking.booking_date == target_d,
-                    QueueBooking.status.not_in(["ยกเลิก", "ยกเลิกนัด", "ปฏิเสธ"])
+                    QueueBooking.status.in_(["ยืนยันแล้ว", "มาตามนัด", "มาตามเวลานัด"])
                 )
             ).all()
 
-            # 2. ตรวจสอบเงื่อนไขตามการเลือกแพทย์
+            # 2. ดึงใบนัดหมาย (Appointment) ในวันเดียวกันที่ยังไม่ถูกยกเลิก
+            confirmed_appointments = session.exec(
+                select(Appointment).where(
+                    Appointment.appointment_date == target_d,
+                    Appointment.status.not_in(["ยกเลิก", "ยกเลิกนัด", "ปฏิเสธ"])
+                )
+            ).all()
+
             is_unspecified = (not self.booking_dentist) or (self.booking_dentist == "ไม่ระบุ")
             sched = None
 
@@ -466,19 +659,37 @@ class AppState(rx.State):
                 ).first()
 
             for slot_time in SLOT_TIMES:
-                booked_count = sum(
-                    1 for b in active_bookings if b.booking_time.strftime("%H:%M") == slot_time
+                # นับคิวจากคำขอจองคิวออนไลน์ที่ได้รับการอนุมัติแล้ว
+                count_from_queue = sum(
+                    1 for b in confirmed_bookings
+                    if (
+                        (hasattr(b.booking_time, "strftime") and b.booking_time.strftime("%H:%M") == slot_time)
+                        or str(b.booking_time)[:5] == slot_time
+                    )
+                    and (
+                        is_unspecified 
+                        or getattr(b, "dentist_name", "") in ("", "ไม่ระบุ") 
+                        or getattr(b, "dentist_name", "") == self.booking_dentist
+                    )
                 )
+
+                # นับคิวจากการออกใบนัดหมายล่วงหน้า (Appointment)
+                count_from_appt = sum(
+                    1 for a in confirmed_appointments
+                    if (
+                        (hasattr(a.appointment_time, "strftime") and a.appointment_time.strftime("%H:%M") == slot_time)
+                        or str(a.appointment_time)[:5] == slot_time
+                    )
+                )
+
+                booked_count = count_from_queue + count_from_appt
                 remain = max(0, MAX_CAPACITY - booked_count)
 
-                # ตรวจสอบเวลาทำการ
+                # ตรวจสอบเวลาทำการของคลินิกและตารางแพทย์
                 in_working_hours = True
-
-                # ถ้าตรงกับช่วงเวลาพักมาตรฐาน จะถูกตัดเป็นนอกเวลาทำการทันที
                 if slot_time in STANDARD_BREAKS:
                     in_working_hours = False
                 elif not is_unspecified and sched:
-                    # ถ้าเลือกแพทย์เจาะจง ให้ตรวจวันเข้าเวร วันลา และเวลาเริ่ม-เลิกงาน
                     work_days = [x for x in sched.work_days.split(",") if x]
                     leaves = []
                     try:
@@ -494,7 +705,6 @@ class AppState(rx.State):
 
                 is_available = (remain > 0) and in_working_hours
 
-                # กำหนดข้อความป้ายกำกับ
                 if not in_working_hours:
                     label_text = "นอกเวลาทำการ"
                 elif remain == 0:
@@ -1080,11 +1290,8 @@ class AppState(rx.State):
         target_time = dt.datetime.strptime(draft["time"], "%H:%M").time()
         pid = self.current_patient_id if self.is_logged_in and self.current_patient_id else "1"
 
-        # ดึง patient_id จาก session ถ้ายังไม่ได้ล็อกอินให้เป็น None หรือ Fallback เป็น "1"
-        pid = self.current_patient_id if self.is_logged_in and self.current_patient_id else "1"
-
         with rx.session() as session:
-            # ดึงรายการจองทั้งหมดในวันเดียวกัน ยกเว้นรายการที่ถูกยกเลิกหรือปฏิเสธ
+            # ดึงรายการจองทั้งหมดในวันเดียวกัน
             day_bookings = session.exec(
                 select(QueueBooking).where(
                     QueueBooking.booking_date == target_date,
@@ -1093,6 +1300,7 @@ class AppState(rx.State):
             ).all()
 
             # บันทึกข้อมูลคิวใหม่ลงฐานข้อมูลชั่วคราว
+           # บันทึกข้อมูลคิวใหม่ลงฐานข้อมูลชั่วคราว
             new_booking = QueueBooking(
                 patient_id=pid,
                 patient_name=draft["patient_name"],
@@ -1100,23 +1308,25 @@ class AppState(rx.State):
                 booking_date=target_date,
                 booking_time=target_time,
                 service_type=draft["service"],
+                dentist_name=draft.get("dentist") or "ไม่ระบุ",  # <-- เพิ่มจุดนี้
                 underlying_disease=draft.get("disease", "ไม่มี"),
                 drug_allergy=draft.get("allergy", "ไม่มี"),
                 status="รออนุมัติ",
-                booking_code="",  # จะอัปเดตโค้ดคิวที่เรียงตามเวลาด้านล่าง
+                booking_code="",
                 created_at=get_utc_now(),
             )
             session.add(new_booking)
             session.flush()
 
-            # รวมคิวทั้งหมดในวันนั้น แล้วเรียงลำดับตามเวลาจอง (เช้าสุดขึ้นก่อน) และเวลาที่กดยืนยัน
+            # รวมคิวทั้งหมดในวันนั้น แล้วเรียงตามเวลาจอง
             all_today = list(day_bookings) + [new_booking]
             all_today.sort(key=lambda b: (b.booking_time, b.created_at))
 
-            # กำหนดรหัส Q-001, Q-002 ตามลำดับเวลาเช้าไปบ่าย
+            # ใช้รหัสที่มีวันที่กำกับ เช่น Q-20261102-001 เพื่อป้องกันการซ้ำกับวันอื่นในฐานข้อมูล
+            date_prefix = target_date.strftime("%Y%m%d")
             assigned_code = ""
             for idx, booking_item in enumerate(all_today, start=1):
-                queue_number_str = f"Q-{idx:03d}"
+                queue_number_str = f"Q-{date_prefix}-{idx:03d}"
                 booking_item.booking_code = queue_number_str
                 session.add(booking_item)
                 if booking_item.id == new_booking.id:
@@ -1286,9 +1496,9 @@ class AppState(rx.State):
                     "patient_name": b.patient_name,
                     "phone": b.phone_number,
                     "date": b.booking_date.isoformat(),
-                    "time": b.booking_time.strftime("%H:%M"),
+                    "time": b.booking_time.strftime("%H:%M") if hasattr(b.booking_time, "strftime") else str(b.booking_time)[:5],
                     "service": b.service_type,
-                    "dentist": "ไม่ระบุ",
+                    "dentist": getattr(b, "dentist_name", "") or "ไม่ระบุ",  # <-- แก้ตรงนี้ให้ดึงจากฐานข้อมูล
                     "status": b.status,
                     "disease": b.underlying_disease or "-",
                     "allergy": b.drug_allergy or "-",
@@ -1476,14 +1686,15 @@ class AppState(rx.State):
                 session.delete(booking)
                 session.commit()
 
-                # รันจัดเลขคิว Q-001, Q-002 ใหม่ตามลำดับเวลาเช้าสุด
+                # รันจัดเลขคิวใหม่ตามลำดับเวลาเช้าสุด โดยใส่วันที่กำกับป้องกันรหัสซ้ำ
+                date_prefix = target_date.strftime("%Y%m%d")
                 remaining = session.exec(
                     select(QueueBooking).where(QueueBooking.booking_date == target_date)
                 ).all()
                 all_rem = list(remaining)
                 all_rem.sort(key=lambda b: (b.booking_time, b.created_at))
                 for idx, item in enumerate(all_rem, start=1):
-                    item.booking_code = f"Q-{idx:03d}"
+                    item.booking_code = f"Q-{date_prefix}-{idx:03d}"
                     session.add(item)
                 session.commit()
 
@@ -1517,13 +1728,14 @@ class AppState(rx.State):
                 session.delete(booking)
                 session.commit()
 
+                date_prefix = target_date.strftime("%Y%m%d")
                 remaining = session.exec(
                     select(QueueBooking).where(QueueBooking.booking_date == target_date)
                 ).all()
                 all_rem = list(remaining)
                 all_rem.sort(key=lambda b: (b.booking_time, b.created_at))
                 for idx, item in enumerate(all_rem, start=1):
-                    item.booking_code = f"Q-{idx:03d}"
+                    item.booking_code = f"Q-{date_prefix}-{idx:03d}"
                     session.add(item)
                 session.commit()
             else:
@@ -1531,6 +1743,7 @@ class AppState(rx.State):
 
         self.load_schedule_data()
         return rx.toast.info("ยกเลิกและลบข้อมูลเรียบร้อยแล้ว")
+    
     @rx.event
     def mark_arrived(self, aid: str):
         with rx.session() as session:
@@ -1604,16 +1817,32 @@ class AppState(rx.State):
     def create_next_appt(self, form: dict):
         target_date = dt.date.fromisoformat(form.get("date") or iso(7))
         target_time = dt.datetime.strptime(form.get("time") or "10:00", "%H:%M").time()
-        slip_code = f"AP-{target_date.strftime('%Y%m%d')}-{str(uuid.uuid4())[:4].upper()}"
 
         patient_field = form.get("patient") or self.next_appt_patient or "ผู้ป่วยทั่วไป"
         patient_name = patient_field.split(" · ")[-1]
         dentist_name = form.get("dentist") or "ทันตแพทย์ประจำคลินิก"
         purpose = form.get("purpose") or "นัดติดตามอาการ"
-        contact_info = form.get("contact") or "0924073094"
+
+        # 1. ค้นหาข้อมูลคนไข้จริงจาก self.patients เพื่อดึงเบอร์โทรและประวัติโรคประจำตัว/ยาที่แพ้
+        matched_patient = next(
+            (p for p in self.patients if p.get("full_name") == patient_name or p.get("id") in patient_field),
+            None,
+        )
+
+        # 2. ใช้เบอร์จากฟอร์ม -> ถ้าไม่มีให้ใช้เบอร์จริงของคนไข้ -> ถ้าไม่มีให้เว้นว่างหรือขีด "-"
+        contact_info = (
+            form.get("contact")
+            or (matched_patient.get("phone") if matched_patient else "")
+            or "-"
+        )
+        patient_id = matched_patient.get("id") if matched_patient else None
 
         with rx.session() as session:
+            total_appts = len(session.exec(select(Appointment)).all())
+            slip_code = f"AP-{total_appts + 1:04d}"
+
             new_appt = Appointment(
+                patient_id=patient_id,
                 patient_name=patient_name,
                 contact_info=contact_info,
                 appointment_date=target_date,
@@ -1631,7 +1860,7 @@ class AppState(rx.State):
         self.next_appt_open = False
         self.load_schedule_data()
 
-        # แสดงป๊อปอัปใบนัดหมายทันทีหลังจากสร้างเสร็จ
+        # แสดงป๊อปอัปใบนัดหมาย
         self.slip = format_appointment({
             "id": slip_code,
             "patient_name": patient_name,
@@ -1644,7 +1873,7 @@ class AppState(rx.State):
             "phone": contact_info,
         })
         self.slip_open = True
-        return rx.toast.success("ออกใบนัดหมายสำเร็จและบันทึกลงระบบแล้ว")
+        return rx.toast.success(f"ออกใบนัดหมายสำเร็จ (รหัส: {slip_code})")
 
     @rx.event
     def select_schedule_dentist(self, did: str):

@@ -7,7 +7,21 @@ from dental_clinic_system.state import AppState
 
 
 def chart_badge() -> rx.Component:
-    return rx.badge("ผังฟันแท้ 32 ซี่", color_scheme="purple", variant="soft", size="2")
+    """Dropdown สลับโหมดผังฟันระหว่างฟันแท้ (ผู้ใหญ่) และฟันน้ำนม (เด็ก)"""
+    return rx.select.root(
+        rx.select.trigger(
+            color_scheme=rx.cond(AppState.chart_mode == "child", "pink", "purple"),
+            variant="soft",
+            size="1",
+            cursor="pointer",
+        ),
+        rx.select.content(
+            rx.select.item("ผังฟันแท้ (32 ซี่)", value="adult"),
+            rx.select.item("ผังฟันน้ำนม (20 ซี่)", value="child"),
+        ),
+        value=AppState.chart_mode,
+        on_change=AppState.set_chart_mode,
+    )
 
 
 def entry_item(e, show_tooth: bool = True) -> rx.Component:

@@ -1,55 +1,86 @@
 import reflex as rx
-from dental_clinic_system.components import header, footer
+from dental_clinic_system.components.header import header
+from dental_clinic_system.components.footer import footer
 
-def service_card(image_url: str, title: str, icon_tag: str) -> rx.Component:
+# รายการบริการ: (ชื่อบริการ, ลิงก์รูปภาพ, ไอคอน)
+SERVICES = [
+    (
+        "ตรวจสุขภาพ & เอกซเรย์",
+        "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&q=80&w=600",
+        "activity",
+    ),
+    (
+        "ขูดหินปูน & ขัดฟัน",
+        "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&q=80&w=600",
+        "wrench",
+    ),
+    (
+        "อุดฟัน & ถอนฟัน",
+        "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=600",
+        "smile",
+    ),
+]
+
+
+def service_card(title: str, image_src: str, icon_tag: str) -> rx.Component:
     return rx.box(
-        rx.box(
-            rx.center(
-                rx.icon(tag=icon_tag, size=22, color="var(--primary-color)"),
-                position="absolute",
-                top="14px",
-                left="14px",
-                background_color="white",
-                padding="10px",
-                border_radius="14px",
-                box_shadow="0 4px 10px rgba(0, 0, 0, 0.1)",
-                z_index="10",
-            ),
-            rx.image(
-                src=image_url,
-                height={"initial": "180px", "md": "220px"},
+        rx.vstack(
+            # กล่องรูปภาพ: กำหนดความสูง 200px คงที่ และครอบด้วย object_fit="cover" ให้รูปสเกลเต็มกรอบเท่ากันทุกรูป
+            rx.box(
+                rx.image(
+                    src=image_src,
+                    width="100%",
+                    height="200px",
+                    object_fit="cover",
+                    border_top_left_radius="16px",
+                    border_top_right_radius="16px",
+                ),
+                # ไอคอนกลมมุมซ้ายบน
+                rx.box(
+                    rx.icon(tag=icon_tag, size=16, color="var(--purple-9)"),
+                    position="absolute",
+                    top="12px",
+                    left="12px",
+                    background_color="white",
+                    border_radius="50%",
+                    padding="8px",
+                    box_shadow="0 2px 8px rgba(0,0,0,0.12)",
+                ),
+                position="relative",
                 width="100%",
-                object_fit="cover",
-                border_radius="16px",
+                overflow="hidden",
             ),
-            position="relative",
-            width="100%",
-            height={"initial": "180px", "md": "220px"},
-            overflow="hidden",
-            border_radius="16px",
-            margin_bottom="16px",
-        ),
-        rx.center(
-            rx.text(
-                title,
-                weight="bold",
-                size="4",
-                color="var(--slate-12)",
-                text_align="center",
+            # ส่วนข้อความชื่อบริการด้านล่าง
+            rx.center(
+                rx.text(
+                    title,
+                    size="3",
+                    weight="bold",
+                    color="var(--slate-12)",
+                    text_align="center",
+                ),
+                width="100%",
+                padding_y="18px",
+                padding_x="12px",
+                flex="1",
             ),
-            height="48px",
-            width="100%",
+            spacing="0",
+            height="100%",
         ),
-        padding={"initial": "14px", "md": "20px"},
-        border_radius="24px",
         background_color="white",
-        box_shadow="0 8px 30px rgba(0,0,0,0.06)",
-        class_name="hover-lift",
+        border_radius="18px",
+        box_shadow="0 8px 24px rgba(0, 0, 0, 0.05)",
+        border="1px solid var(--slate-4)",
+        overflow="hidden",
+        height="100%",
         width="100%",
-        display="flex",
-        flex_direction="column",
-        justify_content="space-between",
+        transition="transform 0.2s ease, box-shadow 0.2s ease",
+        _hover={
+            "transform": "translateY(-4px)",
+            "box_shadow": "0 12px 28px rgba(0, 0, 0, 0.08)",
+        },
     )
+
 
 @rx.page(route="/", title="Dental Guardian - หน้าแรก")
 def home() -> rx.Component:
@@ -186,36 +217,21 @@ def home() -> rx.Component:
                         class_name="animate-fade-in-delayed",
                     ),
                     rx.grid(
-                        service_card(
-                            "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&q=80&w=400",
-                            "ตรวจสุขภาพ & เอกซเรย์",
-                            "activity",
-                        ),
-                        service_card(
-                            "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&q=80&w=400",
-                            "ขูดหินปูน & ขัดฟัน",
-                            "wrench",
-                        ),
-                        service_card(
-                            "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=400",
-                            "อุดฟัน & ถอนฟัน",
-                            "smile",
-                        ),
+                        *[service_card(title, img, icon) for title, img, icon in SERVICES],
                         columns={"initial": "1", "sm": "2", "md": "3"},
-                        spacing={"initial": "4", "md": "8"},
+                        spacing="4",
                         width="100%",
-                        class_name="animate-fade-in-delayed",
+                        align_items="stretch",
                     ),
                     width="100%",
-                    align_items="center",
+                    padding_y="40px",
                 ),
                 width="100%",
-                padding_top="32px",
-                padding_bottom={"initial": "40px", "md": "64px"},
-                padding_x={"initial": "4px", "md": "0"},
-                background_color="white",
-                id="services",
             ),
+            id="services",
+            max_width="1150px",
+            margin="0 auto",
+            padding_x=["12px", "16px"],
         ),
         footer(),
         background_color="white",

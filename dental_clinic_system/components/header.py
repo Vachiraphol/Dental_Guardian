@@ -11,28 +11,31 @@ PUBLIC_LINKS = [
 ]
 
 
-def nav_link(text: str, href: str, icon: str = "") -> rx.Component:
+def nav_link(text: str, href: str, icon: str = "", text_size: str = "3", icon_size: int = 18) -> rx.Component:
     return rx.link(
         rx.hstack(
-            *([rx.icon(tag=icon, size=16)] if icon else []),
-            rx.text(text, size="2", weight="medium"),
+            *([rx.icon(tag=icon, size=icon_size)] if icon else []),
+            rx.text(text, size=text_size, weight="bold" if text_size == "3" else "medium"),
             align="center",
             spacing="1",
         ),
         href=href,
         color="var(--slate-12)",
-        padding_x="14px",
-        padding_y="8px",
+        padding_x="12px" if text_size == "2" else "18px",
+        padding_y="6px" if text_size == "2" else "10px",
         border_radius="999px",
         transition="all 0.2s ease",
-        _hover={"background_color": "white", "color": "var(--primary-color)", "box_shadow": "0 2px 8px rgba(0,0,0,0.06)"},
+        _hover={
+            "background_color": "white",
+            "color": "var(--primary-color)",
+            "box_shadow": "0 2px 10px rgba(0,0,0,0.08)",
+        },
         underline="none",
         white_space="nowrap",
     )
 
 
 def user_menu() -> rx.Component:
-    # ตรวจสอบสิทธิ์ว่าใช่เจ้าหน้าที่ หมอ หรือแอดมินหรือไม่
     is_staff_role = (
         (AppState.user_role == "staff")
         | (AppState.user_role == "dentist")
@@ -48,7 +51,8 @@ def user_menu() -> rx.Component:
                     rx.text(
                         AppState.user_name,
                         size="2",
-                        max_width="140px",
+                        weight="medium",
+                        max_width="130px",
                         overflow="hidden",
                         text_overflow="ellipsis",
                         white_space="nowrap",
@@ -58,6 +62,10 @@ def user_menu() -> rx.Component:
                     variant="soft",
                     color_scheme="purple",
                     radius="full",
+                    size="2",              # ลดจาก size="3" เป็น size="2" ให้ขนาดพอดี
+                    padding_x="10px",       # ลดระยะขอบซ้ายขวาให้กระชับ
+                    padding_y="6px",
+                    height="36px",         # ล็อกความสูงให้พอดีกับแถบเมนู
                 ),
             ),
             rx.menu.content(
@@ -72,7 +80,7 @@ def user_menu() -> rx.Component:
                         ),
                         rx.menu.item(
                             rx.icon(tag="calendar", size=14),
-                            "จัดการตารางเวลาทันตแพทย์",
+                            "ตารางเวลาปฏิบัติงานทันตแพทย์",
                             on_click=rx.redirect("/schedule"),
                         ),
                     ),
@@ -112,17 +120,18 @@ def user_menu() -> rx.Component:
         # กรณีบุคคลทั่วไปที่ยังไม่ได้เข้าสู่ระบบ
         rx.hstack(
             rx.link(
-                rx.button("เข้าสู่ระบบ", variant="soft", color_scheme="purple", radius="full", size="2"),
+                rx.button("เข้าสู่ระบบ", variant="soft", color_scheme="purple", radius="full", size="3"),
                 href="/login",
             ),
             rx.link(
-                rx.button("สมัครสมาชิก", color_scheme="purple", radius="full", size="2"),
+                rx.button("สมัครสมาชิก", color_scheme="purple", radius="full", size="3"),
                 href="/register",
                 display=["none", "block"],
             ),
             spacing="2",
         ),
     )
+
 
 def mobile_menu() -> rx.Component:
     return rx.menu.root(
@@ -148,38 +157,53 @@ def mobile_menu() -> rx.Component:
         ),
     )
 
+
 def header() -> rx.Component:
     return rx.box(
         rx.hstack(
-            rx.link(brand(), href="/", underline="none"),
-            rx.spacer(),
-            rx.hstack(
+            # 1. ฝั่งซ้าย: โลโก้
+            rx.link(brand(), href="/", underline="none", flex_shrink="0"),
+            
+            # 2. ตรงกลาง: แคปซูลเมนูนำทางหลัก (ปรับ padding ให้นิ่ง ไม่กว้างจนล้นไปทับฝั่งขวา)
+            rx.box(
                 rx.hstack(
                     *[nav_link(text, href) for text, href in PUBLIC_LINKS],
                     align="center",
                     spacing="1",
-                    padding="4px",
+                    padding="4px 6px",     # ปรับลด padding ให้แคปซูลกระชับขึ้น
                     border_radius="999px",
-                    background_color="rgba(255, 255, 255, 0.65)",
-                    border="1px solid rgba(255, 255, 255, 0.9)",
-                    box_shadow="0 2px 12px rgba(80, 60, 140, 0.06)",
-                    backdrop_filter="blur(8px)",
+                    background_color="rgba(255, 255, 255, 0.8)",
+                    border="1px solid rgba(255, 255, 255, 0.95)",
+                    box_shadow="0 4px 16px rgba(80, 60, 140, 0.08)",
+                    backdrop_filter="blur(10px)",
                 ),
-                nav_link("สำหรับเจ้าหน้าที่", "/dashboard", "stethoscope"),
-                rx.box(width="1px", height="24px", background_color="var(--slate-6)"),
-                align="center",
-                spacing="3",
-                display=["none", "none", "none", "none", "flex"],
+                position="absolute",
+                left="50%",
+                transform="translateX(-50%)",
+                display=["none", "none", "none", "none", "block"],
+                z_index="10",
             ),
-            user_menu(),
-            rx.box(mobile_menu(), display=["block", "block", "block", "block", "none"]),
+
+            rx.spacer(),
+
+            # 3. ฝั่งขวา: เมนูสำหรับเจ้าหน้าที่ + โปรไฟล์
+            rx.hstack(
+                nav_link("สำหรับเจ้าหน้าที่", "/dashboard", "stethoscope", text_size="2", icon_size=15),
+                rx.box(width="1px", height="20px", background_color="var(--slate-6)"),
+                user_menu(),
+                rx.box(mobile_menu(), display=["block", "block", "block", "block", "none"]),
+                align="center",
+                spacing="2",
+                flex_shrink="0",
+                z_index="20",
+            ),
             width="100%",
             max_width="1280px",
             margin="0 auto",
             align="center",
             padding_x=["16px", "24px"],
-            padding_y="14px",
-            spacing="3",
+            padding_y="12px",
+            position="relative",
         ),
         background_color="transparent",
         position="relative",

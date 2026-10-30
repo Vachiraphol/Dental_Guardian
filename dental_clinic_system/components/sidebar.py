@@ -69,7 +69,41 @@ def sidebar(active: str = "") -> rx.Component:
     return rx.box(
         rx.vstack(
             rx.link(
-                brand("42px", "สำหรับหมอฟันและพยาบาล"),
+                rx.hstack(
+                    rx.image(
+                        src="/logo.png",
+                        alt="Dental Guardian Dental Clinic",
+                        width="auto",
+                        height="58px",  # ปรับโลโก้ให้สูงเด่น 58px
+                        object_fit="contain",
+                        flex_shrink="0",
+                    ),
+                    rx.vstack(
+                        rx.text(
+                            "Dental Guardian",
+                            size="5",  # ขยายชื่อแบรนด์ให้ใหญ่ขึ้น
+                            weight="bold",
+                            font_weight="900",
+                            color="#1e3f4b",
+                            white_space="nowrap",
+                            line_height="1.1",
+                            letter_spacing="-0.02em",
+                        ),
+                        rx.text(
+                            "สำหรับหมอฟันและพยาบาล",
+                            size="3",  # ขยายคำบรรยายด้านล่างให้ใหญ่ขึ้น
+                            weight="bold",
+                            color="var(--slate-10)",
+                            white_space="nowrap",
+                            line_height="1.2",
+                        ),
+                        spacing="1",
+                        align_items="start",
+                        justify="center",
+                    ),
+                    align="center",
+                    spacing="3",
+                ),
                 href="/",
                 underline="none",
                 padding_x="12px",
@@ -165,7 +199,7 @@ def mobile_topbar(active: str = "") -> rx.Component:
     )
 
     return rx.hstack(
-        rx.link(logo("36px"), href="/"),
+        rx.link(logo("48px"), href="/"),
         rx.vstack(
             rx.text("Dental Guardian", size="1", color="var(--slate-10)"),
             rx.text(current_title, size="2", weight="bold", white_space="nowrap", overflow="hidden", text_overflow="ellipsis"),

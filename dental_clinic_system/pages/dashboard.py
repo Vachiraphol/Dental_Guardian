@@ -122,17 +122,8 @@ def patient_card(a) -> rx.Component:
     )
 
 
-<<<<<<< HEAD
 @rx.page(route="/dashboard", title="แดชบอร์ด", on_load=AppState.load_schedule_data)
 def dashboard():
-=======
-@rx.page(
-    route="/dashboard",
-    title="แดชบอร์ดผู้ป่วยรายวัน - Dental Guardian",
-    on_load=[AppState.check_staff_access, AppState.load_schedule_data],
-)
-def dashboard() -> rx.Component:
->>>>>>> origin/feat/backend-auth-v2
     s = AppState.daily_stats
     return staff_page(
         "dashboard",

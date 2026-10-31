@@ -370,13 +370,14 @@ class AppState(rx.State):
         with rx.session() as session:
             # 1. ตรวจสอบข้อมูลคนไข้ (อายุ)
             pt = session.exec(
-                select(Patient).where(Patient.pid == pid)
+                select(Patient).where(Patient.hn_code == pid)
             ).first()
             
             is_kid = False
-            if pt and hasattr(pt, "age") and pt.age is not None:
+            if pt and pt.birth_date is not None:
                 try:
-                    if int(pt.age) <= 12:  # อายุไม่เกิน 12 ปี ให้เป็นฟันน้ำนม
+                    age = calc_age(pt.birth_date.isoformat())
+                    if age <= 12:  # อายุไม่เกิน 12 ปี ให้เป็นฟันน้ำนม
                         is_kid = True
                 except Exception:
                     pass
@@ -389,8 +390,8 @@ class AppState(rx.State):
             ).first()
 
             if booking:
-                svc = str(booking.service or "")
-                note_text = str(booking.purpose or "") + str(booking.note or "")
+                svc = str(getattr(booking, "service_type", "") or "")
+                note_text = str(getattr(booking, "notes", "") or "")
                 if "เด็ก" in svc or "ฟันน้ำนม" in svc or "เด็ก" in note_text:
                     is_kid = True
 
@@ -403,6 +404,8 @@ class AppState(rx.State):
     @rx.var
     def is_child_case(self) -> bool:
         """ตรวจสอบว่าคนไข้ปัจจุบันเป็นเคสเด็กหรือไม่ (จากอายุ <= 12 ปี หรือจองคิวทันตกรรมเด็ก)."""
+        if self.chart_mode == "child":
+            return True
         pid = getattr(self, "selected_pid", "")
         if not pid:
             return False
@@ -411,11 +414,12 @@ class AppState(rx.State):
             with rx.session() as session:
                 # 1. เช็กอายุจากตาราง Patient โดยตรง
                 pt = session.exec(
-                    select(Patient).where(Patient.pid == pid)
+                    select(Patient).where(Patient.hn_code == pid)
                 ).first()
-                if pt and hasattr(pt, "age") and pt.age is not None:
+                if pt and pt.birth_date is not None:
                     try:
-                        if int(pt.age) <= 12:
+                        age = calc_age(pt.birth_date.isoformat())
+                        if age <= 12:
                             return True
                     except (ValueError, TypeError):
                         pass
@@ -427,10 +431,9 @@ class AppState(rx.State):
                     .order_by(QueueBooking.id.desc())
                 ).first()
                 if booking:
-                    svc = str(getattr(booking, "service", "") or "")
-                    purpose = str(getattr(booking, "purpose", "") or "")
-                    note = str(getattr(booking, "note", "") or "")
-                    text = f"{svc} {purpose} {note}"
+                    svc = str(getattr(booking, "service_type", "") or "")
+                    note = str(getattr(booking, "notes", "") or "")
+                    text = f"{svc} {note}"
                     if "เด็ก" in text or "ฟันน้ำนม" in text:
                         return True
         except Exception:
@@ -2249,26 +2252,6 @@ class AppState(rx.State):
 
         self.load_treatment_entries()
         return rx.toast.success(f"บันทึกการรักษาซี่ {saved_tooth} เรียบร้อยแล้ว")
-
-        # บันทึกข้อมูลการรักษาลงในตาราง TreatmentEntry
-        with rx.session() as session:
-            new_entry = TreatmentEntry(
-                patient_id=target_pid,
-                tooth_number=self.entry_tooth,
-                icd_code=self.entry_icd,
-                procedure_name=self.entry_procedure,
-                notes=self.entry_note.strip() if self.entry_note else None,
-                dentist_name=self.user_name if self.is_logged_in else "ทันตแพทย์ผู้ตรวจ",
-                created_at=get_utc_now(),
-            )
-            session.add(new_entry)
-            session.commit()
-            session.refresh(new_entry)
-
-        # เคลียร์ฟอร์มและโหลดข้อมูลผังฟันใหม่
-        self.entry_note = ""
-        self.load_schedule_data()
-        return rx.toast.success(f"บันทึกการรักษาซี่ {self.entry_tooth} เรียบร้อยแล้ว")
     
     @rx.event
     def select_my_tooth(self, tooth: str):

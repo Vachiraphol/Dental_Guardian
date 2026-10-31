@@ -26,6 +26,7 @@ def engine_fixture():
     SQLModel.metadata.create_all(engine)
     yield engine
     SQLModel.metadata.drop_all(engine)
+    engine.dispose()
 
 
 @pytest.fixture(name="session", scope="function")

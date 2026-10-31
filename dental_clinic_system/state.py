@@ -11,6 +11,7 @@ format_entry so the pages get the display fields they expect.
 See BACKEND_HANDOFF.md for the field list of each row.
 """
 
+from builtins import Exception
 import json
 import calendar
 import datetime
@@ -591,76 +592,80 @@ class AppState(rx.State):
     @rx.var
     def booking_days(self) -> list[dict[str, str]]:
         """คำนวณสถานะ 14 วันข้างหน้าโดยแยกตารางตรวจตามเดือนจริงของแต่ละวัน"""
-        days = []
-        target_dentist = self.booking_dentist if self.booking_dentist != "ไม่ระบุ" else None
+        try:
+            days = []
+            target_dentist = self.booking_dentist if self.booking_dentist != "ไม่ระบุ" else None
 
-        with rx.session() as session:
-            # ดึงตารางงานทั้งหมดมาเตรียมไว้เพื่อคำนวณข้ามเดือน
-            all_schedules = session.exec(select(DoctorSchedule)).all()
+            with rx.session() as session:
+                # ดึงตารางงานทั้งหมดมาเตรียมไว้เพื่อคำนวณข้ามเดือน
+                all_schedules = session.exec(select(DoctorSchedule)).all()
 
-            for offset in range(0, 14):
-                d = today() + dt.timedelta(days=offset)
-                iso_str = d.isoformat()
-                weekday_num = str(d.isoweekday())  # 1=จันทร์ ... 7=อาทิตย์
-                month_str = d.strftime("%Y-%m")    # เช่น "2026-10" หรือ "2026-11"
+                for offset in range(0, 14):
+                    d = today() + dt.timedelta(days=offset)
+                    iso_str = d.isoformat()
+                    weekday_num = str(d.isoweekday())  # 1=จันทร์ ... 7=อาทิตย์
+                    month_str = d.strftime("%Y-%m")    # เช่น "2026-10" หรือ "2026-11"
 
-                is_closed = False
+                    is_closed = False
 
-                # กรองตารางของเดือนนั้นๆ
-                month_scheds = [s for s in all_schedules if s.schedule_month == month_str]
+                    # กรองตารางของเดือนนั้นๆ
+                    month_scheds = [s for s in all_schedules if s.schedule_month == month_str]
 
-                if target_dentist:
-                    # กรณีระบุแพทย์
-                    doc_sched = next((s for s in month_scheds if s.dentist_name == target_dentist), None)
-                    if doc_sched:
-                        work_days = [x for x in doc_sched.work_days.split(",") if x]
-                        leaves = []
-                        try:
-                            leaves_data = json.loads(doc_sched.leaves)
-                            leaves = [x.get("date") for x in leaves_data if isinstance(x, dict)]
-                        except Exception:
-                            leaves = [x for x in doc_sched.leaves.split(",") if x]
-
-                        if (weekday_num not in work_days) or (iso_str in leaves):
-                            is_closed = True
-                    else:
-                        # ถ้าเดือนนั้นยังไม่เคยตั้งค่า ให้ใช้ค่าเริ่มต้น (จันทร์-ศุกร์)
-                        if weekday_num in ["6", "7"]:
-                            is_closed = True
-                else:
-                    # กรณี "ไม่ระบุ" แพทย์ (เปิดตามวันทำการของคลินิก)
-                    if month_scheds:
-                        # มีแพทย์คนใดคนหนึ่งเข้าเวรหรือไม่
-                        any_working = False
-                        for s in month_scheds:
-                            w_days = [x for x in s.work_days.split(",") if x]
-                            l_dates = []
+                    if target_dentist:
+                        # กรณีระบุแพทย์
+                        doc_sched = next((s for s in month_scheds if s.dentist_name == target_dentist), None)
+                        if doc_sched:
+                            work_days = [x for x in doc_sched.work_days.split(",") if x]
+                            leaves = []
                             try:
-                                l_objs = json.loads(s.leaves)
-                                l_dates = [x.get("date") for x in l_objs if isinstance(x, dict)]
+                                leaves_data = json.loads(doc_sched.leaves)
+                                leaves = [x.get("date") for x in leaves_data if isinstance(x, dict)]
                             except Exception:
-                                l_dates = [x for x in s.leaves.split(",") if x]
+                                leaves = [x for x in doc_sched.leaves.split(",") if x]
 
-                            if (weekday_num in w_days) and (iso_str not in l_dates):
-                                any_working = True
-                                break
-                        if not any_working:
-                            is_closed = True
+                            if (weekday_num not in work_days) or (iso_str in leaves):
+                                is_closed = True
+                        else:
+                            # ถ้าเดือนนั้นยังไม่เคยตั้งค่า ให้ใช้ค่าเริ่มต้น (จันทร์-ศุกร์)
+                            if weekday_num in ["6", "7"]:
+                                is_closed = True
                     else:
-                        # ถ้าเดือนใหม่ยังไม่ได้ตั้งค่า คลินิกเปิดวันจันทร์-ศุกร์ เป็นค่าเริ่มต้น
-                        if weekday_num in ["6", "7"]:
-                            is_closed = True
+                        # กรณี "ไม่ระบุ" แพทย์ (เปิดตามวันทำการของคลินิก)
+                        if month_scheds:
+                            # มีแพทย์คนใดคนหนึ่งเข้าเวรหรือไม่
+                            any_working = False
+                            for s in month_scheds:
+                                w_days = [x for x in s.work_days.split(",") if x]
+                                l_dates = []
+                                try:
+                                    l_objs = json.loads(s.leaves)
+                                    l_dates = [x.get("date") for x in l_objs if isinstance(x, dict)]
+                                except Exception:
+                                    l_dates = [x for x in s.leaves.split(",") if x]
 
-                days.append({
-                    "iso": iso_str,
-                    "weekday": THAI_DAYS[d.isoweekday() - 1],
-                    "day": str(d.day),
-                    "month": THAI_MONTHS[d.month - 1],
-                    "free": "",
-                    "closed": "1" if is_closed else "0",
-                })
+                                if (weekday_num in w_days) and (iso_str not in l_dates):
+                                    any_working = True
+                                    break
+                            if not any_working:
+                                is_closed = True
+                        else:
+                            # ถ้าเดือนใหม่ยังไม่ได้ตั้งค่า คลินิกเปิดวันจันทร์-ศุกร์ เป็นค่าเริ่มต้น
+                            if weekday_num in ["6", "7"]:
+                                is_closed = True
 
-        return days
+                    days.append({
+                        "iso": iso_str,
+                        "weekday": THAI_DAYS[d.isoweekday() - 1],
+                        "day": str(d.day),
+                        "month": THAI_MONTHS[d.month - 1],
+                        "free": "",
+                        "closed": "1" if is_closed else "0",
+                    })
+
+            return days
+        except Exception:
+            # คืนค่าว่างไปก่อน หากตารางยังไม่ถูกสร้างหรือเกิด Error
+            return []
 
     @rx.var
     def booking_slots(self) -> list[dict[str, str]]:
@@ -669,108 +674,108 @@ class AppState(rx.State):
     @rx.var
     def available_slots(self) -> list[dict[str, str]]:
         """คำนวณคิวว่างและช่วงเวลา โดยหักลดจำนวนคิวที่ถูกจองแล้วอย่างแม่นยำ"""
-        slots = []
-        MAX_CAPACITY = 2  # คลินิกรองรับได้รอบละ 2 คิว
-        STANDARD_BREAKS = {"12:00", "12:30", "17:30", "18:00"}
-
         try:
-            target_d = dt.date.fromisoformat(self.booking_date)
-            weekday_str = str(target_d.isoweekday())
-            target_month = target_d.strftime("%Y-%m")
+            slots = []
+            MAX_CAPACITY = 2
+            STANDARD_BREAKS = {"12:00", "12:30", "17:30", "18:00"}
+
+            try:
+                target_d = dt.date.fromisoformat(self.booking_date)
+                weekday_str = str(target_d.isoweekday())
+                target_month = target_d.strftime("%Y-%m")
+            except Exception:
+                target_d = today()
+                weekday_str = "1"
+                target_month = "2026-10"
+
+            with rx.session() as session:
+                # 1. ดึงคิวออนไลน์ทั้งหมด
+                confirmed_bookings = session.exec(
+                    select(QueueBooking).where(
+                        QueueBooking.booking_date == target_d,
+                        QueueBooking.status.not_in(["ยกเลิก", "ยกเลิกนัด", "ปฏิเสธ"])
+                    )
+                ).all()
+
+                # 2. ดึงใบนัดหมาย (Appointment)
+                confirmed_appointments = session.exec(
+                    select(Appointment).where(
+                        Appointment.appointment_date == target_d,
+                        Appointment.status.not_in(["ยกเลิก", "ยกเลิกนัด", "ปฏิเสธ"])
+                    )
+                ).all()
+
+                is_unspecified = (not self.booking_dentist) or (self.booking_dentist == "ไม่ระบุ")
+                sched = None
+
+                if not is_unspecified:
+                    sched = session.exec(
+                        select(DoctorSchedule).where(
+                            DoctorSchedule.dentist_name == self.booking_dentist,
+                            DoctorSchedule.schedule_month == target_month,
+                        )
+                    ).first()
+
+                for slot_time in SLOT_TIMES:
+                    count_from_queue = sum(
+                        1 for b in confirmed_bookings
+                        if (
+                            (hasattr(b.booking_time, "strftime") and b.booking_time.strftime("%H:%M") == slot_time)
+                            or str(b.booking_time)[:5] == slot_time
+                        )
+                        and (
+                            is_unspecified 
+                            or getattr(b, "dentist_name", "") in ("", "ไม่ระบุ", None) 
+                            or getattr(b, "dentist_name", "") == self.booking_dentist
+                        )
+                    )
+
+                    count_from_appt = sum(
+                        1 for a in confirmed_appointments
+                        if (
+                            (hasattr(a.appointment_time, "strftime") and a.appointment_time.strftime("%H:%M") == slot_time)
+                            or str(a.appointment_time)[:5] == slot_time
+                        )
+                    )
+
+                    booked_count = count_from_queue + count_from_appt
+                    remain = max(0, MAX_CAPACITY - booked_count)
+
+                    in_working_hours = True
+                    if slot_time in STANDARD_BREAKS:
+                        in_working_hours = False
+                    elif not is_unspecified and sched:
+                        work_days = [x for x in sched.work_days.split(",") if x]
+                        leaves = []
+                        try:
+                            leave_objs = json.loads(sched.leaves)
+                            leaves = [x.get("date") for x in leave_objs if isinstance(x, dict)]
+                        except Exception:
+                            leaves = [x for x in sched.leaves.split(",") if x]
+
+                        if (weekday_str not in work_days) or (self.booking_date in leaves):
+                            in_working_hours = False
+                        elif not (sched.start_time <= slot_time < sched.end_time):
+                            in_working_hours = False
+
+                    is_available = (remain > 0) and in_working_hours
+
+                    if not in_working_hours:
+                        label_text = "นอกเวลาทำการ"
+                    elif remain == 0:
+                        label_text = "เต็ม"
+                    else:
+                        label_text = f"ว่าง {remain} คิว"
+
+                    slots.append({
+                        "time": slot_time,
+                        "label": label_text,
+                        "available": "1" if is_available else "0",
+                    })
+
+            return slots
         except Exception:
-            target_d = today()
-            weekday_str = "1"
-            target_month = "2026-10"
-
-        with rx.session() as session:
-            # 1. ดึงคิวออนไลน์ทั้งหมดในวันเดียวกัน ที่ไม่ใช่การยกเลิก/ปฏิเสธ
-            confirmed_bookings = session.exec(
-                select(QueueBooking).where(
-                    QueueBooking.booking_date == target_d,
-                    QueueBooking.status.not_in(["ยกเลิก", "ยกเลิกนัด", "ปฏิเสธ"])
-                )
-            ).all()
-
-            # 2. ดึงใบนัดหมาย (Appointment) ในวันเดียวกัน
-            confirmed_appointments = session.exec(
-                select(Appointment).where(
-                    Appointment.appointment_date == target_d,
-                    Appointment.status.not_in(["ยกเลิก", "ยกเลิกนัด", "ปฏิเสธ"])
-                )
-            ).all()
-
-            is_unspecified = (not self.booking_dentist) or (self.booking_dentist == "ไม่ระบุ")
-            sched = None
-
-            if not is_unspecified:
-                sched = session.exec(
-                    select(DoctorSchedule).where(
-                        DoctorSchedule.dentist_name == self.booking_dentist,
-                        DoctorSchedule.schedule_month == target_month,
-                    )
-                ).first()
-
-            for slot_time in SLOT_TIMES:
-                # แปลงเวลาของ QueueBooking ให้อยู่ในรูปแบบ "HH:MM" เสมอเพื่อเปรียบเทียบ
-                count_from_queue = sum(
-                    1 for b in confirmed_bookings
-                    if (
-                        (hasattr(b.booking_time, "strftime") and b.booking_time.strftime("%H:%M") == slot_time)
-                        or str(b.booking_time)[:5] == slot_time
-                    )
-                    and (
-                        is_unspecified 
-                        or getattr(b, "dentist_name", "") in ("", "ไม่ระบุ", None) 
-                        or getattr(b, "dentist_name", "") == self.booking_dentist
-                    )
-                )
-
-                # แปลงเวลาของ Appointment ให้อยู่ในรูปแบบ "HH:MM"
-                count_from_appt = sum(
-                    1 for a in confirmed_appointments
-                    if (
-                        (hasattr(a.appointment_time, "strftime") and a.appointment_time.strftime("%H:%M") == slot_time)
-                        or str(a.appointment_time)[:5] == slot_time
-                    )
-                )
-
-                booked_count = count_from_queue + count_from_appt
-                remain = max(0, MAX_CAPACITY - booked_count)
-
-                # ตรวจสอบเวลาทำการ
-                in_working_hours = True
-                if slot_time in STANDARD_BREAKS:
-                    in_working_hours = False
-                elif not is_unspecified and sched:
-                    work_days = [x for x in sched.work_days.split(",") if x]
-                    leaves = []
-                    try:
-                        leave_objs = json.loads(sched.leaves)
-                        leaves = [x.get("date") for x in leave_objs if isinstance(x, dict)]
-                    except Exception:
-                        leaves = [x for x in sched.leaves.split(",") if x]
-
-                    if (weekday_str not in work_days) or (self.booking_date in leaves):
-                        in_working_hours = False
-                    elif not (sched.start_time <= slot_time < sched.end_time):
-                        in_working_hours = False
-
-                is_available = (remain > 0) and in_working_hours
-
-                if not in_working_hours:
-                    label_text = "นอกเวลาทำการ"
-                elif remain == 0:
-                    label_text = "เต็ม"
-                else:
-                    label_text = f"ว่าง {remain} คิว"
-
-                slots.append({
-                    "time": slot_time,
-                    "label": label_text,
-                    "available": "1" if is_available else "0",
-                })
-
-        return slots
+            return []
     
     @rx.var
     def booking_date_th(self) -> str:
@@ -2007,7 +2012,7 @@ class AppState(rx.State):
 
     @rx.event
     def select_schedule_dentist(self, did: str):
-        self.schedule_dentist_id = did\
+        self.schedule_dentist_id = did
 
     @rx.event
     def set_new_leave_date(self, value: str):

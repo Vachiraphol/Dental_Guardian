@@ -26,7 +26,7 @@ class TreatmentUpdate(BaseModel):
 
 # 1. GET: ดึงรายการประวัติการรักษาทั้งหมด หรือกรองตามคนไข้ / ซี่ฟัน
 @router.get("/treatments")
-def get_treatments(patient_id: Optional[str] = Query(None), tooth: Optional[str] = Query(None)):
+def get_treatments(patient_id: Optional[str] = None, tooth: Optional[str] = None):
     with rx.session() as session:
         query = select(TreatmentEntry)
         if patient_id:

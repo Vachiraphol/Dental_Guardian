@@ -1,2 +1,8 @@
-
 reflex==0.9.11
+alembic
+pytest
+pytest-asyncio
+pytest-cov
+alembic
+pytest
+pytest-asyncio

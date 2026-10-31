@@ -24,3 +24,5 @@ assets/external/
 .DS_Store
 reflex.log
 deploy.exp
+.pytest_cache/
+.coverage

@@ -1461,9 +1461,18 @@ class AppState(rx.State):
 
     @rx.event
     def load_patients_data(self):
-        """ดึงข้อมูลผู้ป่วยทั้งหมดจากฐานข้อมูล SQLite เข้าสู่ State"""
+        if not self.is_logged_in:
+            return
+
         with rx.session() as session:
-            db_patients = session.exec(select(Patient)).all()
+            # หากเป็นคนไข้ จะดึงได้เฉพาะประวัติของตนเองเท่านั้น
+            if self.user_role == "patient":
+                db_patients = session.exec(
+                    select(Patient).where(Patient.hn_code == self.current_patient_id)
+                ).all()
+            else:
+                db_patients = session.exec(select(Patient)).all()
+
             loaded = []
             for p in db_patients:
                 loaded.append(format_patient({

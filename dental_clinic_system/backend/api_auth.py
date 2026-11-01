@@ -1,19 +1,42 @@
 import uuid
+import random
 import datetime as dt
-from typing import Optional
+from typing import Optional, Dict
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from sqlmodel import select
+from passlib.context import CryptContext
 import reflex as rx
 
 from .models import User, Patient, get_utc_now
+
+# ---------------------------------------------------------------------------
+# Password Hashing Configuration (bcrypt)
+# ---------------------------------------------------------------------------
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password(password: str) -> str:
+    """แฮชรหัสผ่านด้วย bcrypt"""
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """ตรวจสอบความถูกต้องของรหัสผ่าน plain text กับ hash ในฐานข้อมูล"""
+    return pwd_context.verify(plain_password, hashed_password)
+
+# ---------------------------------------------------------------------------
+# In-Memory OTP Storage for Password Reset (Key: email -> Dict)
+# ---------------------------------------------------------------------------
+OTP_STORAGE: Dict[str, dict] = {}
+
+def generate_numeric_otp(length: int = 6) -> str:
+    """สุ่มรหัสตัวเลข OTP ตามความยาวที่กำหนด"""
+    return "".join([str(random.randint(0, 9)) for _ in range(length)])
 
 # ---------------------------------------------------------------------------
 # Router Definitions
 # ---------------------------------------------------------------------------
 router_auth = APIRouter(prefix="/auth", tags=["SRS 5.2: Authentication & Member"])
 router_patient = APIRouter(prefix="/patients", tags=["SRS 5.1: Patient Records"])
-
 
 # ---------------------------------------------------------------------------
 # Pydantic Schemas
@@ -66,14 +89,13 @@ class PatientUpdateRequest(BaseModel):
     drug_allergy: Optional[str] = None
 
 
-# เพิ่มคลาสนี้เพื่อแก้ NameError: name 'PatientCreateRequest' is not defined
 class PatientCreateRequest(BaseModel):
     first_name: str
     last_name: str
     phone_number: str
     national_id: Optional[str] = None
     email: Optional[str] = None
-    birth_date: Optional[str] = None  # รูปแบบ YYYY-MM-DD
+    birth_date: Optional[str] = None  # Format: YYYY-MM-DD
     gender: Optional[str] = "ไม่ระบุ"
     address: Optional[str] = None
     underlying_disease: Optional[str] = "ไม่มี"
@@ -86,7 +108,7 @@ class PatientCreateRequest(BaseModel):
 
 @router_auth.post("/register", status_code=status.HTTP_201_CREATED)
 def register_user(payload: RegisterRequest):
-    """สมัครสมาชิกผู้ป่วยใหม่: สร้างบัญชีใน User และเปิดเวชระเบียนใน Patient"""
+    """สมัครสมาชิกผู้ป่วยใหม่: บันทึกรหัสผ่านที่แฮชแล้วลง User และสร้างเวชระเบียนใน Patient"""
     first_name = payload.first_name.strip()
     last_name = payload.last_name.strip()
     phone = payload.phone.strip()
@@ -104,9 +126,10 @@ def register_user(payload: RegisterRequest):
         if existing_user:
             raise HTTPException(status_code=400, detail="อีเมลนี้ถูกใช้งานในระบบแล้ว")
 
+        # แฮชรหัสผ่านด้วย bcrypt ก่อนบันทึกลงฐานข้อมูล
         new_user = User(
             username=email,
-            password_hash=payload.password,
+            password_hash=hash_password(payload.password),
             full_name=f"{first_name} {last_name}",
             role="patient",
             is_active=True,
@@ -123,7 +146,6 @@ def register_user(payload: RegisterRequest):
             except ValueError:
                 pass
 
-        # รันรหัสผู้ป่วย P-0001, P-0002 เรียงตามลำดับจำนวนคนไข้
         patient_count = len(session.exec(select(Patient)).all())
         hn_code = f"P-{patient_count + 1:04d}"
 
@@ -155,11 +177,21 @@ def register_user(payload: RegisterRequest):
 
 @router_auth.post("/login")
 def login_user(payload: LoginRequest):
-    """เข้าสู่ระบบพร้อมตรวจสอบสิทธิ์ (Role-based Authentication)"""
+    """เข้าสู่ระบบพร้อมตรวจสอบสิทธิ์และตรวจเช็กรหัสผ่านผ่าน bcrypt verify"""
     email = payload.username.strip().lower()
     with rx.session() as session:
         user = session.exec(select(User).where(User.username == email)).first()
-        if not user or user.password_hash != payload.password:
+        if not user:
+            raise HTTPException(status_code=401, detail="อีเมลหรือรหัสผ่านไม่ถูกต้อง")
+
+        # ตรวจสอบรหัสผ่านแบบ bcrypt หรือ fallback กรณีข้อมูลเก่าเป็น plain text
+        is_valid = False
+        try:
+            is_valid = verify_password(payload.password, user.password_hash)
+        except Exception:
+            is_valid = (user.password_hash == payload.password)
+
+        if not is_valid:
             raise HTTPException(status_code=401, detail="อีเมลหรือรหัสผ่านไม่ถูกต้อง")
 
         if payload.role == "staff" and user.role not in ("staff", "dentist", "admin"):
@@ -196,7 +228,7 @@ def login_user(payload: LoginRequest):
 
 @router_auth.post("/change-password")
 def change_password(payload: ChangePasswordRequest):
-    """เปลี่ยนรหัสผ่านผู้ใช้งาน"""
+    """เปลี่ยนรหัสผ่านผู้ใช้งานพร้อมแฮชรหัสผ่านใหม่"""
     if len(payload.new_password) < 8:
         raise HTTPException(status_code=400, detail="รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร")
     if payload.new_password != payload.confirm_password:
@@ -205,11 +237,19 @@ def change_password(payload: ChangePasswordRequest):
         raise HTTPException(status_code=400, detail="รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านเดิม")
 
     with rx.session() as session:
-        user = session.exec(select(User).where(User.username == payload.email.lower())).first()
-        if not user or user.password_hash != payload.current_password:
+        user = session.exec(select(User).where(User.username == payload.email.strip().lower())).first()
+        if not user:
             raise HTTPException(status_code=400, detail="รหัสผ่านปัจจุบันไม่ถูกต้อง")
 
-        user.password_hash = payload.new_password
+        try:
+            valid_curr = verify_password(payload.current_password, user.password_hash)
+        except Exception:
+            valid_curr = (user.password_hash == payload.current_password)
+
+        if not valid_curr:
+            raise HTTPException(status_code=400, detail="รหัสผ่านปัจจุบันไม่ถูกต้อง")
+
+        user.password_hash = hash_password(payload.new_password)
         session.add(user)
         session.commit()
 
@@ -218,29 +258,58 @@ def change_password(payload: ChangePasswordRequest):
 
 @router_auth.post("/forgot-password/request")
 def request_password_reset(payload: RequestResetRequest):
-    """ขอรีเซ็ตรหัสผ่านผ่านอีเมล"""
+    """ขอรหัส OTP สำหรับตั้งรหัสผ่านใหม่ (หมดอายุภายใน 5 นาที)"""
+    email = payload.email.strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="กรุณาระบุอีเมล")
+
     with rx.session() as session:
-        user = session.exec(select(User).where(User.username == payload.email.lower())).first()
+        user = session.exec(select(User).where(User.username == email)).first()
         if not user:
             raise HTTPException(status_code=404, detail="ไม่พบบัญชีผู้ใช้งานที่ใช้อีเมลนี้")
-        return {"message": "ระบบได้จำลองการส่งรหัสยืนยัน OTP ไปยังอีเมลของท่านแล้ว", "email": payload.email}
+
+        otp_code = generate_numeric_otp(6)
+        expires_at = dt.datetime.now() + dt.timedelta(minutes=5)
+        OTP_STORAGE[email] = {"code": otp_code, "expires_at": expires_at}
+
+        # จำลองการส่งออกไปทาง console log เพื่อการตรวจสอบและทดสอบ
+        print(f"\n[SECURITY OTP SERVICE] Key: {email} | OTP: {otp_code} | Expires: {expires_at.strftime('%H:%M:%S')}\n")
+
+        return {
+            "message": "รหัส OTP ถูกสร้างเรียบร้อยแล้ว (มีอายุการใช้งาน 5 นาที)",
+            "email": email
+        }
 
 
 @router_auth.post("/forgot-password/confirm")
 def confirm_password_reset(payload: ConfirmResetRequest):
-    """ยืนยันการตั้งรหัสผ่านใหม่ด้วย OTP"""
+    """ตรวจสอบ OTP และอัปเดตรหัสผ่านใหม่แบบเข้ารหัส bcrypt"""
+    email = payload.email.strip().lower()
+    otp = payload.otp.strip()
+
     if len(payload.new_password) < 8 or payload.new_password != payload.confirm_password:
-        raise HTTPException(status_code=400, detail="รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษรและตรงกัน")
+        raise HTTPException(status_code=400, detail="รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษรและต้องตรงกัน")
+
+    record = OTP_STORAGE.get(email)
+    if not record or record["code"] != otp:
+        raise HTTPException(status_code=400, detail="รหัส OTP ไม่ถูกต้อง")
+    if dt.datetime.now() > record["expires_at"]:
+        OTP_STORAGE.pop(email, None)
+        raise HTTPException(status_code=400, detail="รหัส OTP หมดอายุแล้ว กรุณาขอใหม่อีกครั้ง")
 
     with rx.session() as session:
-        user = session.exec(select(User).where(User.username == payload.email.lower())).first()
+        user = session.exec(select(User).where(User.username == email)).first()
         if not user:
             raise HTTPException(status_code=404, detail="ไม่พบข้อมูลบัญชีผู้ใช้")
 
-        user.password_hash = payload.new_password
+        user.password_hash = hash_password(payload.new_password)
         session.add(user)
         session.commit()
-        return {"message": "ตั้งรหัสผ่านใหม่เรียบร้อยแล้ว"}
+
+        # ล้าง OTP ที่ใช้แล้วออกจากหน่วยความจำ
+        OTP_STORAGE.pop(email, None)
+
+        return {"message": "ตั้งรหัสผ่านใหม่เรียบร้อยแล้ว เข้าสู่ระบบด้วยรหัสผ่านใหม่ได้ทันที"}
 
 
 # ===========================================================================
@@ -282,13 +351,11 @@ def list_all_patients(search: Optional[str] = None):
 
 @router_patient.post("/", status_code=status.HTTP_201_CREATED)
 def create_patient_record(payload: PatientCreateRequest):
-    """สร้างเวชระเบียนผู้ป่วยใหม่ พร้อมออกรหัส P-0001 อัตโนมัติ"""
+    """สร้างเวชระเบียนผู้ป่วยใหม่ พร้อมออกรหัส P-XXXX อัตโนมัติ"""
     with rx.session() as session:
-        # คำนวณรหัส P-0001, P-0002 เรียงตามลำดับจำนวนคนไข้
         total_patients = len(session.exec(select(Patient)).all())
         hn_code = f"P-{total_patients + 1:04d}"
 
-        # แปลงสตริงวันเกิดถ้ามีส่งมา
         dob = None
         if payload.birth_date:
             try:
@@ -323,7 +390,7 @@ def create_patient_record(payload: PatientCreateRequest):
 
 @router_patient.get("/{hn_code}")
 def get_patient_by_hn(hn_code: str):
-    """ค้นหาและดึงข้อมูลเวชระเบียนผู้ป่วยรายบุคคลตามรหัสผู้ป่วย (เช่น P-0001)"""
+    """ค้นหาและดึงข้อมูลเวชระเบียนผู้ป่วยรายบุคคลตามรหัสผู้ป่วย"""
     with rx.session() as session:
         p = session.exec(select(Patient).where(Patient.hn_code == hn_code.upper())).first()
         if not p:
@@ -367,7 +434,6 @@ def update_patient_record(hn_code: str, payload: PatientUpdateRequest):
         if payload.drug_allergy is not None:
             p.drug_allergy = payload.drug_allergy.strip() or "ไม่มี"
 
-        # อัปเดตชื่อในตาราง User ด้วยหากผูกบัญชีไว้
         if p.user_id:
             u = session.exec(select(User).where(User.id == p.user_id)).first()
             if u:

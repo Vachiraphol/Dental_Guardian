@@ -17,7 +17,7 @@ import datetime
 import datetime as dt
 import uuid
 import reflex as rx
-from sqlmodel import select
+from sqlmodel import select, func, or_
 from dental_clinic_system.backend.models import (
     QueueBooking,
     Appointment,
@@ -1021,7 +1021,11 @@ class AppState(rx.State):
             return
 
         with rx.session() as session:
-            user = session.exec(select(User).where(User.username == email)).first()
+            # ค้นหา User แบบไม่สนตัวพิมพ์เล็ก-ใหญ่
+            user = session.exec(
+                select(User).where(func.lower(User.username) == email)
+            ).first()
+
             is_valid = False
             if user:
                 try:
@@ -1033,6 +1037,7 @@ class AppState(rx.State):
                 self.login_error = "อีเมลหรือรหัสผ่านไม่ถูกต้อง"
                 return
 
+            # ตรวจสอบ Role ให้ยืดหยุ่นขึ้น
             if self.login_role == "staff" and user.role not in ("staff", "dentist", "admin"):
                 self.login_error = "บัญชีนี้ไม่มีสิทธิ์เข้าใช้งานในส่วนทันตแพทย์/เจ้าหน้าที่"
                 return
@@ -1047,7 +1052,7 @@ class AppState(rx.State):
             if user.role == "patient":
                 patient = session.exec(
                     select(Patient).where(
-                        (Patient.user_id == user.id) | (Patient.email == user.username)
+                        (Patient.user_id == user.id) | (func.lower(Patient.email) == email)
                     )
                 ).first()
 
@@ -1070,8 +1075,9 @@ class AppState(rx.State):
 
             self.load_patients_data()
             self.load_schedule_data()
-            self.load_treatment_entries()  # โหลดประวัติการรักษาทันทีหลังเข้าสู่ระบบ
+            self.load_treatment_entries()
 
+            # นำทางตาม Role (หากผู้ป่วยไม่มีหน้า /profile ให้เปลี่ยนเป็น / หรือ /my-appointments)
             if user.role in ("staff", "dentist", "admin"):
                 return rx.redirect("/dashboard")
             return rx.redirect("/profile")

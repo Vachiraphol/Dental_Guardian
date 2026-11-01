@@ -14,4 +14,8 @@ config = rx.Config(
     app_name="dental_clinic_system",
     db_url=database_url,
     backend_host="0.0.0.0",
+    plugins=[
+        rx.plugins.SitemapPlugin(),
+    ],
+    disable_plugins=[],
 )

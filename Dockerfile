@@ -2,27 +2,34 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# ติดตั้ง System Dependencies และ Nginx
+# 1. ติดตั้ง System Dependencies พร้อม util-linux เพื่อตัดข้อผิดพลาด lscpu
 RUN apt-get update && apt-get install -y \
     curl \
     unzip \
     git \
     libpq-dev \
     nginx \
+    util-linux \
     && rm -rf /var/lib/apt/lists/*
 
-# ติดตั้ง Python Dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# 2. สร้าง Virtual Environment เพื่อไม่ให้ pip แจ้งเตือน running as root (แถบสีแดง)
+ENV VIRTUAL_ENV=/opt/venv
+RUN python -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-# คัดลอกซอร์สโค้ดทั้งหมด
+# 3. ติดตั้ง Python Packages
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# 4. คัดลอกซอร์สโค้ด
 COPY . .
 
-# คอมไพล์หน้าบ้านเป็น Static Files ในช่วง Build (ไม่กิน RAM ช่วง Run)
+# 5. Build หน้าบ้านล่วงหน้า
 RUN reflex init
 RUN reflex export --frontend-only --no-zip
 
-# สร้างการตั้งค่า Nginx
+# 6. สร้างการตั้งค่า Nginx สำหรับ Reverse Proxy
 RUN echo 'server { \
     listen 10000; \
     server_name _; \
@@ -57,5 +64,5 @@ RUN echo 'server { \
 ENV PORT=10000
 EXPOSE 10000
 
-# สั่งเริ่ม Nginx บนพอร์ต 10000 ควบคู่กับ Backend บนพอร์ต 8000
+# 7. สั่งเริ่มระบบ
 CMD service nginx start && reflex run --env prod --backend-only --backend-host 127.0.0.1 --backend-port 8000

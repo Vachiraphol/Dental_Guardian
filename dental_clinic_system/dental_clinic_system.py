@@ -35,27 +35,7 @@ class State(rx.State):
     """The app state."""
     pass
 
-# Script บังคับถอด class="dark" และ data-theme="dark" ทิ้งทันทีที่หน้าเว็บโหลด
-force_light_js = """
-(function() {
-    function removeDark() {
-        document.documentElement.classList.remove('dark');
-        document.documentElement.setAttribute('data-theme', 'light');
-        document.documentElement.style.colorScheme = 'light';
-        if (document.body) {
-            document.body.classList.remove('dark');
-            document.body.setAttribute('data-theme', 'light');
-            document.body.style.colorScheme = 'light';
-        }
-    }
-    removeDark();
-    document.addEventListener('DOMContentLoaded', removeDark);
-    const observer = new MutationObserver(removeDark);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
-})();
-"""
-
-# 2. ผูกเข้ากับ Reflex App พร้อมล็อก Light Mode
+# 2. ผูกเข้ากับ Reflex App (ตัด script observer ออก เพื่อหยุด loop)
 app = rx.App(
     theme=rx.theme(
         appearance="light",
@@ -69,7 +49,6 @@ app = rx.App(
         rx.el.meta(name="color-scheme", content="light"),
         rx.el.link(rel="stylesheet", href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"),
         rx.el.link(rel="icon", type="image/png", href="/logo.png"),
-        rx.el.script(force_light_js),
     ],
     api_transformer=fastapi_app,
 )

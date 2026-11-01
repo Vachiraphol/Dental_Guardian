@@ -1,5 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
 
+/* ========================================================
+   1. FORCE CHROMIUM TO NEVER AUTO-INVERT COLORS
+   คีย์เวิร์ด "only light" สั่งให้เบราว์เซอร์ห้าม Invert สีเด็ดขาด
+   ======================================================== */
 :root,
 html,
 body,
@@ -7,13 +11,28 @@ body,
 [data-theme],
 .dark,
 [data-theme='dark'] {
+    color-scheme: only light !important;
     --primary-color: #7C69AC;
     --primary-light: #EFEBF5;
     --footer-bg: #F0EFEA;
-    color-scheme: light !important;
+
+    /* Override ตัวแปรสีพื้นฐานของ Radix Themes ให้เป็น Light Mode เสมอ */
+    --color-background: #FAFAFA !important;
+    --color-surface: #FFFFFF !important;
+    --color-panel-solid: #FFFFFF !important;
+    --slate-1: #FCFCFD !important;
+    --slate-2: #F8FAFC !important;
+    --slate-3: #F1F5F9 !important;
+    --slate-4: #E2E8F0 !important;
+    --slate-5: #CBD5E1 !important;
+    --slate-6: #94A3B8 !important;
+    --slate-11: #475569 !important;
+    --slate-12: #0F172A !important;
 }
 
-/* บังคับสไตล์ Light Mode ตลอดเวลา */
+/* ========================================================
+   2. CORE TEXT & BACKGROUND LOCKS
+   ======================================================== */
 body,
 html,
 .radix-themes,
@@ -22,7 +41,7 @@ html,
     color: #1E293B !important;
 }
 
-/* ล็อกสีข้อความแถบ Header / Navbar / แคปซูล */
+/* ล็อกสีข้อความแถบ Header, Navbar และเมนูแคปซูลทั้งหมด */
 header,
 header *,
 nav,
@@ -32,27 +51,42 @@ header span,
 header p,
 nav a,
 nav span,
-nav p {
+nav p,
+.radix-themes:is(.dark, [data-theme='dark']) header a,
+.radix-themes:is(.dark, [data-theme='dark']) header span,
+.radix-themes:is(.dark, [data-theme='dark']) header p,
+.radix-themes:is(.dark, [data-theme='dark']) nav a,
+.radix-themes:is(.dark, [data-theme='dark']) nav span,
+.radix-themes:is(.dark, [data-theme='dark']) nav p {
     color: #1E293B !important;
 }
 
 /* ล็อกพื้นหลังกล่อง การ์ด และ Modal */
 .rt-Card,
 .rt-DialogContent,
-div[class*="rt-Card"] {
+div[class*="rt-Card"],
+.radix-themes:is(.dark, [data-theme='dark']) .rt-Card,
+.radix-themes:is(.dark, [data-theme='dark']) .rt-DialogContent {
     background-color: #FFFFFF !important;
     color: #1E293B !important;
     border: 1px solid #E2E8F0 !important;
 }
 
-/* ล็อก Input, Textarea, Select ให้พื้นหลังขาว ขอบเทาอ่อน ไม่มืด */
+/* ล็อก Input, Textarea, Select ให้พื้นหลังขาว ขอบเทาอ่อน ไม่ทึบมืด */
 input,
 textarea,
 select,
 .rt-TextFieldRoot,
 .rt-TextFieldInput,
 .rt-TextAreaRoot,
-.rt-SelectTrigger {
+.rt-SelectTrigger,
+.radix-themes:is(.dark, [data-theme='dark']) input,
+.radix-themes:is(.dark, [data-theme='dark']) textarea,
+.radix-themes:is(.dark, [data-theme='dark']) select,
+.radix-themes:is(.dark, [data-theme='dark']) .rt-TextFieldRoot,
+.radix-themes:is(.dark, [data-theme='dark']) .rt-TextFieldInput,
+.radix-themes:is(.dark, [data-theme='dark']) .rt-TextAreaRoot,
+.radix-themes:is(.dark, [data-theme='dark']) .rt-SelectTrigger {
     background-color: #FFFFFF !important;
     color: #1E293B !important;
     border: 1px solid #CBD5E1 !important;
@@ -63,21 +97,25 @@ textarea::placeholder {
     color: #94A3B8 !important;
 }
 
-/* ปุ่มสีม่วงคงตัวหนังสือขาว */
+/* ปุ่มม่วง Solid ให้ตัวหนังสือสีขาวเสมอ */
 .rt-Button[data-variant="solid"],
-.rt-Button[data-variant="solid"] * {
+.rt-Button[data-variant="solid"] *,
+.rt-Button[data-accent-color="purple"][data-variant="solid"] {
     color: #FFFFFF !important;
 }
 
-/* ปิดการแทรกแซงจาก Dark Mode ของ OS */
+/* ปิดกั้นคำสั่ง Dark Mode ของเบราว์เซอร์ */
 @media (prefers-color-scheme: dark) {
     :root, html, body, .radix-themes, .dark, [data-theme='dark'] {
-        color-scheme: light !important;
+        color-scheme: only light !important;
         background-color: #FAFAFA !important;
         color: #1E293B !important;
     }
 }
 
+/* ========================================================
+   3. TYPOGRAPHY & UTILITIES
+   ======================================================== */
 body, html, .rt-Text, .rt-Heading, .rt-Button, .rt-Link, .rt-Box, .rt-Flex, .rt-Container {
     font-family: 'Kanit', sans-serif !important;
     -webkit-font-smoothing: antialiased;

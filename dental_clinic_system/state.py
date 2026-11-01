@@ -1850,6 +1850,25 @@ class AppState(rx.State):
         return rx.toast.info("ยกเลิกและลบคิวออกจากระบบเรียบร้อยแล้ว")
 
     @rx.event
+    def cancel_queue_booking(self, booking_id: int, reason: str = "ผู้ป่วยขอยกเลิก"):
+        """ยกเลิกคิวและอัปเดตสถานะในฐานข้อมูล"""
+        with rx.session() as session:
+            booking = session.exec(
+                select(QueueBooking).where(QueueBooking.id == booking_id)
+            ).first()
+            if not booking:
+                return rx.toast.error("ไม่พบคิวที่ต้องการยกเลิก")
+
+            # ปรับสถานะเป็นยกเลิก (เพื่อให้ระบบคำนวณคืนโควตาคิวว่างในวันนั้น)
+            booking.status = "ยกเลิก"
+            session.add(booking)
+            session.commit()
+
+        # โหลดข้อมูลคิวและตารางงานใหม่เพื่ออัปเดตหน้าบ้านทันที
+        self.load_schedule_data()
+        return rx.toast.success(f"ยกเลิกคิวเรียบร้อยแล้ว ({reason})")
+
+    @rx.event
     def cancel_appt(self, aid: str):
         """สำหรับเจ้าหน้าที่กดยกเลิกนัดหมายหรือคิว (ลบออกจากฐานข้อมูลทันที)"""
         with rx.session() as session:
@@ -2215,6 +2234,40 @@ class AppState(rx.State):
         self.load_patients_data()
         self.load_treatment_entries()
         return rx.redirect(page)
+
+    @rx.event
+    def select_patient_for_treatment(self, hn_code: str):
+        """เลือกคนไข้เข้าตรวจ พร้อมคำนวณอายุและสลับโหมดฟันน้ำนม/ฟันแท้อัตโนมัติ (SRS 5.4)"""
+        with rx.session() as session:
+            patient = session.exec(
+                select(Patient).where(Patient.hn_code == hn_code)
+            ).first()
+            if not patient:
+                return rx.toast.error("ไม่พบข้อมูลผู้ป่วย")
+
+            # กำหนด ID คนไข้ที่กำลังตรวจ
+            self.selected_patient_id = patient.hn_code
+            self.selected_tooth = ""
+            self.entry_tooth = ""
+
+            # คำนวณอายุจาก birth_date
+            if patient.birth_date:
+                today_val = dt.date.today()
+                age = today_val.year - patient.birth_date.year - (
+                    (today_val.month, today_val.day) < (patient.birth_date.month, patient.birth_date.day)
+                )
+                # หากอายุน้อยกว่าหรือเท่ากับ 12 ปี ให้ปรับเป็นโหมดฟันเด็ก (Pediatric Odontogram)
+                if age <= 12:
+                    self.chart_mode = "child"
+                else:
+                    self.chart_mode = "adult"
+            else:
+                self.chart_mode = "adult"
+
+        # โหลดเวชระเบียนและประวัติการรักษาทั้งหมดของคนไข้เข้าผังฟัน
+        self.load_patients_data()
+        self.load_treatment_entries()
+        return rx.toast.info(f"เลือกผู้ป่วย {patient.first_name} {patient.last_name} (โหมด: {'ฟันน้ำนม' if self.chart_mode == 'child' else 'ฟันแท้'})")
 
     @rx.event
     def select_tooth(self, tooth: str):

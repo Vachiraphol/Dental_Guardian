@@ -62,10 +62,10 @@ def user_menu() -> rx.Component:
                     variant="soft",
                     color_scheme="purple",
                     radius="full",
-                    size="2",              # ลดจาก size="3" เป็น size="2" ให้ขนาดพอดี
-                    padding_x="10px",       # ลดระยะขอบซ้ายขวาให้กระชับ
+                    size="2",
+                    padding_x="10px",
                     padding_y="6px",
-                    height="36px",         # ล็อกความสูงให้พอดีกับแถบเมนู
+                    height="36px",
                 ),
             ),
             rx.menu.content(
@@ -159,18 +159,24 @@ def mobile_menu() -> rx.Component:
 
 
 def header() -> rx.Component:
+    is_staff_role = (
+        (AppState.user_role == "staff")
+        | (AppState.user_role == "dentist")
+        | (AppState.user_role == "admin")
+    )
+
     return rx.box(
         rx.hstack(
             # 1. ฝั่งซ้าย: โลโก้
             rx.link(brand(), href="/", underline="none", flex_shrink="0"),
             
-            # 2. ตรงกลาง: แคปซูลเมนูนำทางหลัก (ปรับ padding ให้นิ่ง ไม่กว้างจนล้นไปทับฝั่งขวา)
+            # 2. ตรงกลาง: แคปซูลเมนูนำทางหลัก
             rx.box(
                 rx.hstack(
                     *[nav_link(text, href) for text, href in PUBLIC_LINKS],
                     align="center",
                     spacing="1",
-                    padding="4px 6px",     # ปรับลด padding ให้แคปซูลกระชับขึ้น
+                    padding="4px 6px",
                     border_radius="999px",
                     background_color="rgba(255, 255, 255, 0.8)",
                     border="1px solid rgba(255, 255, 255, 0.95)",
@@ -186,10 +192,17 @@ def header() -> rx.Component:
 
             rx.spacer(),
 
-            # 3. ฝั่งขวา: เมนูสำหรับเจ้าหน้าที่ + โปรไฟล์
+            # 3. ฝั่งขวา: เมนูสำหรับเจ้าหน้าที่ (แสดงเฉพาะหมอ/สตาฟ) + โปรไฟล์
             rx.hstack(
-                nav_link("สำหรับเจ้าหน้าที่", "/dashboard", "stethoscope", text_size="2", icon_size=15),
-                rx.box(width="1px", height="20px", background_color="var(--slate-6)"),
+                rx.cond(
+                    is_staff_role,
+                    rx.hstack(
+                        nav_link("สำหรับเจ้าหน้าที่", "/dashboard", "stethoscope", text_size="2", icon_size=15),
+                        rx.box(width="1px", height="20px", background_color="var(--slate-6)"),
+                        align="center",
+                        spacing="2",
+                    ),
+                ),
                 user_menu(),
                 rx.box(mobile_menu(), display=["block", "block", "block", "block", "none"]),
                 align="center",

@@ -1,32 +1,110 @@
 @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
 
-:root {
+:root,
+html,
+body,
+.radix-themes,
+[data-theme],
+.dark,
+[data-theme='dark'] {
     --primary-color: #7C69AC;
     --primary-light: #EFEBF5;
     --footer-bg: #F0EFEA;
     color-scheme: light !important;
 }
 
-/* บังคับไม่ให้เปลี่ยนสีตาม Dark mode ของ Browser หรือ Windows */
+/* ========================================================
+   FORCE STRICT LIGHT THEME (OVERRIDE RADIX & DARK MODE)
+   ======================================================== */
+
+/* 1. บังคับสีพื้นหลังและสีตัวอักษรหลักทั้งระบบ */
+body,
+html,
+.radix-themes,
+.radix-themes:is(.dark, [data-theme='dark']) {
+    background-color: #FAFAFA !important;
+    color: #1E293B !important;
+}
+
+/* 2. บังคับตัวหนังสือบนแถบ Header, Navbar และเมนูแคปซูล ให้เป็นสีเข้มชัดเจน */
+header,
+header *,
+nav,
+nav *,
+header a,
+header span,
+header p,
+nav a,
+nav span,
+nav p,
+.radix-themes:is(.dark, [data-theme='dark']) header a,
+.radix-themes:is(.dark, [data-theme='dark']) header span,
+.radix-themes:is(.dark, [data-theme='dark']) header p,
+.radix-themes:is(.dark, [data-theme='dark']) nav a,
+.radix-themes:is(.dark, [data-theme='dark']) nav span,
+.radix-themes:is(.dark, [data-theme='dark']) nav p {
+    color: #1E293B !important;
+}
+
+/* 3. ล็อกพื้นหลังและการ์ดทั้งหมดให้เป็นสีขาว */
+.rt-Card,
+.rt-DialogContent,
+div[class*="rt-Card"],
+.radix-themes:is(.dark, [data-theme='dark']) .rt-Card,
+.radix-themes:is(.dark, [data-theme='dark']) .rt-DialogContent {
+    background-color: #FFFFFF !important;
+    color: #1E293B !important;
+    border-color: #E2E8F0 !important;
+}
+
+/* 4. ล็อกช่อง Input, Textarea, Select ไม่ให้เป็นสีเทาดำมืด */
+input,
+textarea,
+select,
+.rt-TextFieldRoot,
+.rt-TextFieldInput,
+.rt-TextAreaRoot,
+.rt-SelectTrigger,
+.radix-themes:is(.dark, [data-theme='dark']) input,
+.radix-themes:is(.dark, [data-theme='dark']) textarea,
+.radix-themes:is(.dark, [data-theme='dark']) .rt-TextFieldRoot,
+.radix-themes:is(.dark, [data-theme='dark']) .rt-TextAreaRoot,
+.radix-themes:is(.dark, [data-theme='dark']) .rt-SelectTrigger {
+    background-color: #FFFFFF !important;
+    color: #1E293B !important;
+    border: 1px solid #CBD5E1 !important;
+}
+
+/* ป้ายแสดงสถานะ / ข้อความกำกับในช่อง Input */
+input::placeholder,
+textarea::placeholder {
+    color: #94A3B8 !important;
+}
+
+/* 5. ปุ่มประเภท Solid (ม่วง) ให้ตัวหนังสือเป็นสีขาวเสมอ */
+.rt-Button[data-variant="solid"],
+.rt-Button[data-variant="solid"] *,
+.rt-Button[data-accent-color="purple"][data-variant="solid"] {
+    color: #FFFFFF !important;
+}
+
+/* 6. บังคับไม่ให้เปลี่ยนสีตาม Dark mode ของ Browser หรือ Windows */
 @media (prefers-color-scheme: dark) {
-    :root, html, body {
+    :root, html, body, .radix-themes, .dark, [data-theme='dark'] {
         color-scheme: light !important;
         background-color: #FAFAFA !important;
         color: #1E293B !important;
     }
 }
 
+/* Typography & Reset */
 body, html, .rt-Text, .rt-Heading, .rt-Button, .rt-Link, .rt-Box, .rt-Flex, .rt-Container {
     font-family: 'Kanit', sans-serif !important;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-    background-color: #FAFAFA !important;
-}
-
-/* บังคับสีข้อความแจ้งเตือนสีแดง (เช่น ยังไม่ได้เลือกเวลา, ข้อผิดพลาดต่างๆ) */
+/* บังคับสีข้อความแจ้งเตือนสีแดง */
 .rt-Text[color="red"],
 .rt-Text[data-accent-color="red"],
 [class*="text-red"],

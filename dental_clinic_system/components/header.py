@@ -15,14 +15,14 @@ def nav_link(text: str, href: str, icon: str = "", text_size: str = "3", icon_si
     return rx.link(
         rx.hstack(
             *([rx.icon(tag=icon, size=icon_size)] if icon else []),
-            rx.text(text, size=text_size, weight="bold" if text_size == "3" else "medium"),
+            rx.text(text, size=text_size, weight="medium"),
             align="center",
-            spacing="1",
+            spacing="2",
         ),
         href=href,
         color="var(--slate-12)",
-        padding_x="12px" if text_size == "2" else "18px",
-        padding_y="6px" if text_size == "2" else "10px",
+        padding_x="18px",
+        padding_y="8px",
         border_radius="999px",
         transition="all 0.2s ease",
         _hover={
@@ -52,7 +52,7 @@ def user_menu() -> rx.Component:
                         AppState.user_name,
                         size="2",
                         weight="medium",
-                        max_width="130px",
+                        max_width="140px",
                         overflow="hidden",
                         text_overflow="ellipsis",
                         white_space="nowrap",
@@ -63,46 +63,88 @@ def user_menu() -> rx.Component:
                     color_scheme="purple",
                     radius="full",
                     size="2",
-                    padding_x="10px",
+                    padding_x="12px",
                     padding_y="6px",
                     height="36px",
                 ),
             ),
             rx.menu.content(
-                # เมนูสำหรับเจ้าหน้าที่ / ทันตแพทย์ / แอดมิน (คนไข้ทั่วไปจะไม่เห็นเมนูนี้)
+                # เมนูสำหรับเจ้าหน้าที่ / ทันตแพทย์ / แอดมิน
                 rx.cond(
                     is_staff_role,
                     rx.fragment(
+                        # หมวด: นัดหมายและจองคิว
                         rx.menu.item(
-                            rx.icon(tag="layout_dashboard", size=14),
+                            rx.icon(tag="layout_dashboard", size=15),
                             "แดชบอร์ดผู้ป่วยรายวัน",
                             on_click=rx.redirect("/dashboard"),
                         ),
                         rx.menu.item(
-                            rx.icon(tag="calendar", size=14),
+                            rx.hstack(
+                                rx.hstack(
+                                    rx.icon(tag="inbox", size=15),
+                                    rx.text("จัดการคำขอจองคิว"),
+                                    align="center",
+                                    spacing="2",
+                                ),
+                                rx.spacer(),
+                                rx.cond(
+                                    AppState.pending_count > 0,
+                                    rx.badge(
+                                        AppState.pending_count,
+                                        color_scheme="red",
+                                        variant="solid",
+                                        radius="full",
+                                        size="1",
+                                    ),
+                                ),
+                                width="100%",
+                                align="center",
+                            ),
+                            on_click=rx.redirect("/requests"),
+                        ),
+                        rx.menu.item(
+                            rx.icon(tag="calendar_check", size=15),
+                            "จัดการนัดหมายคนไข้",
+                            on_click=rx.redirect("/appointments"),
+                        ),
+                        rx.menu.item(
+                            rx.icon(tag="calendar", size=15),
                             "ตารางเวลาปฏิบัติงานทันตแพทย์",
                             on_click=rx.redirect("/schedule"),
+                        ),
+                        rx.menu.separator(),
+                        # หมวด: ประวัติการรักษา
+                        rx.menu.item(
+                            rx.icon(tag="file_pen_line", size=15),
+                            "บันทึกการรักษาและผังฟัน",
+                            on_click=rx.redirect("/treatment"),
+                        ),
+                        rx.menu.item(
+                            rx.icon(tag="file_text", size=15),
+                            "สรุปประวัติเวชระเบียนรวม",
+                            on_click=rx.redirect("/records"),
                         ),
                     ),
                     # เมนูสำหรับคนไข้ทั่วไป
                     rx.fragment(
                         rx.menu.item(
-                            rx.icon(tag="user", size=14),
+                            rx.icon(tag="user", size=15),
                             "ข้อมูลส่วนตัว",
                             on_click=rx.redirect("/profile"),
                         ),
                         rx.menu.item(
-                            rx.icon(tag="pencil", size=14),
+                            rx.icon(tag="pencil", size=15),
                             "แก้ไขข้อมูลส่วนตัว",
                             on_click=rx.redirect("/profile/edit"),
                         ),
                         rx.menu.item(
-                            rx.icon(tag="key_round", size=14),
+                            rx.icon(tag="key_round", size=15),
                             "เปลี่ยนรหัสผ่าน",
                             on_click=rx.redirect("/profile/password"),
                         ),
                         rx.menu.item(
-                            rx.icon(tag="shield_check", size=14),
+                            rx.icon(tag="shield_check", size=15),
                             "ตั้งค่าความเป็นส่วนตัว",
                             on_click=rx.redirect("/profile/privacy"),
                         ),
@@ -110,14 +152,14 @@ def user_menu() -> rx.Component:
                 ),
                 rx.menu.separator(),
                 rx.menu.item(
-                    rx.icon(tag="log_out", size=14),
+                    rx.icon(tag="log_out", size=15),
                     "ออกจากระบบ",
                     color="red",
                     on_click=AppState.logout,
                 ),
             ),
         ),
-        # กรณีบุคคลทั่วไปที่ยังไม่ได้เข้าสู่ระบบ
+        # บุคคลทั่วไป (ยังไม่ได้ล็อกอิน)
         rx.hstack(
             rx.link(
                 rx.button("เข้าสู่ระบบ", variant="soft", color_scheme="purple", radius="full", size="3"),
@@ -134,6 +176,11 @@ def user_menu() -> rx.Component:
 
 
 def mobile_menu() -> rx.Component:
+    is_staff_role = (
+        (AppState.user_role == "staff")
+        | (AppState.user_role == "dentist")
+        | (AppState.user_role == "admin")
+    )
     return rx.menu.root(
         rx.menu.trigger(
             rx.icon_button(rx.icon(tag="menu"), variant="ghost", color_scheme="gray", size="3"),
@@ -141,16 +188,33 @@ def mobile_menu() -> rx.Component:
         rx.menu.content(
             *[rx.menu.item(text, on_click=rx.redirect(href)) for text, href in PUBLIC_LINKS],
             rx.cond(
-                (AppState.user_role == "staff")
-                | (AppState.user_role == "dentist")
-                | (AppState.user_role == "admin"),
+                is_staff_role,
                 rx.fragment(
                     rx.menu.separator(),
+                    rx.menu.item("แดชบอร์ดผู้ป่วยรายวัน", on_click=rx.redirect("/dashboard")),
                     rx.menu.item(
-                        rx.icon(tag="shield_check", size=14),
-                        "สำหรับเจ้าหน้าที่",
-                        on_click=rx.redirect("/dashboard"),
+                        rx.hstack(
+                            rx.text("จัดการคำขอจองคิว"),
+                            rx.spacer(),
+                            rx.cond(
+                                AppState.pending_count > 0,
+                                rx.badge(
+                                    AppState.pending_count,
+                                    color_scheme="red",
+                                    variant="solid",
+                                    radius="full",
+                                    size="1",
+                                ),
+                            ),
+                            width="100%",
+                            align="center",
+                        ),
+                        on_click=rx.redirect("/requests"),
                     ),
+                    rx.menu.item("จัดการนัดหมายคนไข้", on_click=rx.redirect("/appointments")),
+                    rx.menu.item("ตารางเวลาปฏิบัติงานทันตแพทย์", on_click=rx.redirect("/schedule")),
+                    rx.menu.item("บันทึกการรักษาและผังฟัน", on_click=rx.redirect("/treatment")),
+                    rx.menu.item("สรุปประวัติเวชระเบียนรวม", on_click=rx.redirect("/records")),
                 ),
                 rx.fragment(),
             ),
@@ -159,52 +223,37 @@ def mobile_menu() -> rx.Component:
 
 
 def header() -> rx.Component:
-    is_staff_role = (
-        (AppState.user_role == "staff")
-        | (AppState.user_role == "dentist")
-        | (AppState.user_role == "admin")
-    )
-
     return rx.box(
         rx.hstack(
-            # 1. ฝั่งซ้าย: โลโก้
+            # 1. ฝั่งซ้าย: แบรนด์และโลโก้
             rx.link(brand(), href="/", underline="none", flex_shrink="0"),
-            
-            # 2. ตรงกลาง: แคปซูลเมนูนำทางหลัก
+
+            # 2. ตรงกลาง: แคปซูลเมนูนำทางหลัก จัดกึ่งกลางหน้าจออย่างสมดุล
             rx.box(
                 rx.hstack(
                     *[nav_link(text, href) for text, href in PUBLIC_LINKS],
                     align="center",
                     spacing="1",
-                    padding="4px 6px",
+                    padding="6px 8px",
                     border_radius="999px",
-                    background_color="rgba(255, 255, 255, 0.8)",
+                    background_color="rgba(255, 255, 255, 0.85)",
                     border="1px solid rgba(255, 255, 255, 0.95)",
-                    box_shadow="0 4px 16px rgba(80, 60, 140, 0.08)",
-                    backdrop_filter="blur(10px)",
+                    box_shadow="0 4px 18px rgba(80, 60, 140, 0.08)",
+                    backdrop_filter="blur(12px)",
                 ),
                 position="absolute",
                 left="50%",
                 transform="translateX(-50%)",
-                display=["none", "none", "none", "none", "block"],
+                display=["none", "none", "none", "block"],
                 z_index="10",
             ),
 
             rx.spacer(),
 
-            # 3. ฝั่งขวา: เมนูสำหรับเจ้าหน้าที่ (แสดงเฉพาะหมอ/สตาฟ) + โปรไฟล์
+            # 3. ฝั่งขวา: โปรไฟล์ผู้ใช้ และ Hamburger menu สำหรับมือถือ
             rx.hstack(
-                rx.cond(
-                    is_staff_role,
-                    rx.hstack(
-                        nav_link("สำหรับเจ้าหน้าที่", "/dashboard", "stethoscope", text_size="2", icon_size=15),
-                        rx.box(width="1px", height="20px", background_color="var(--slate-6)"),
-                        align="center",
-                        spacing="2",
-                    ),
-                ),
                 user_menu(),
-                rx.box(mobile_menu(), display=["block", "block", "block", "block", "none"]),
+                rx.box(mobile_menu(), display=["block", "block", "block", "none"]),
                 align="center",
                 spacing="2",
                 flex_shrink="0",

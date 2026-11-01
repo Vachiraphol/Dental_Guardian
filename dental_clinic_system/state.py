@@ -27,6 +27,7 @@ from dental_clinic_system.backend.models import (
     DoctorSchedule,
     get_utc_now,
 )
+from dental_clinic_system.backend.api_auth import verify_password
 
 THAI_MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
 THAI_DAYS = ["จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส.", "อา."]  # isoweekday 1..7
@@ -1021,7 +1022,14 @@ class AppState(rx.State):
 
         with rx.session() as session:
             user = session.exec(select(User).where(User.username == email)).first()
-            if not user or user.password_hash != password:
+            is_valid = False
+            if user:
+                try:
+                    is_valid = verify_password(password, user.password_hash)
+                except Exception:
+                    is_valid = (user.password_hash == password)
+
+            if not user or not is_valid:
                 self.login_error = "อีเมลหรือรหัสผ่านไม่ถูกต้อง"
                 return
 

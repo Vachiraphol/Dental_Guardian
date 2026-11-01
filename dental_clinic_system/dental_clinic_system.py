@@ -14,7 +14,8 @@ fastapi_app = FastAPI(
     openapi_url="/openapi.json",
 )
 
-# Route หน้าแรก ป้องกัน Not Found
+# Route เช็คสถานะ API
+@fastapi_app.get("/api/health")
 @fastapi_app.get("/")
 def read_root():
     return {
@@ -28,7 +29,6 @@ def read_root():
         },
     }
 
-# รวม Router ทั้งประวัติการรักษา (5.4) และคิว/การนัดหมาย (5.3)
 fastapi_app.include_router(treatment_router)
 fastapi_app.include_router(queue_router)
 
@@ -36,12 +36,45 @@ class State(rx.State):
     """The app state."""
     pass
 
-# 2. ผูกเข้ากับ Reflex App ผ่าน api_transformer
+# บังคับสีตัวหนังสือให้เป็นสีเข้ม แม้เครื่องผู้ใช้จะเปิด Dark Mode อยู่ก็ตาม
+dark_mode_fix_css = """
+/* บังคับลิงก์และข้อความใน Navbar ด้านบนทั้งหมดให้เป็นสีเข้ม */
+header nav a, 
+header nav span, 
+header nav p, 
+header a, 
+nav a, 
+nav span,
+.radix-themes:is(.dark, [data-theme='dark']) header a,
+.radix-themes:is(.dark, [data-theme='dark']) nav a {
+    color: #111827 !important;
+}
+
+/* บังคับหัวข้อบริการทางทันตกรรมและส่วนเนื้อหาบนการ์ดขาว */
+.radix-themes:is(.dark, [data-theme='dark']) h2,
+.radix-themes:is(.dark, [data-theme='dark']) .rt-Heading {
+    color: #111827 !important;
+}
+
+/* ยกเว้นปุ่มที่มีพื้นหลังสีม่วง เช่น สมัครสมาชิก หรือปุ่มนัดหมาย ให้ตัวหนังสือเป็นสีขาว */
+header button, 
+nav button, 
+.rt-Button[data-variant="solid"] {
+    color: #ffffff !important;
+}
+"""
+
+# 2. ผูกเข้ากับ Reflex App พร้อมบังคับ appearance="light"
 app = rx.App(
+    theme=rx.theme(
+        appearance="light",
+        has_background=True,
+    ),
     stylesheets=["/styles.css"],
     head_components=[
         rx.el.link(rel="stylesheet", href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"),
         rx.el.link(rel="icon", type="image/png", href="/logo.png"),
+        rx.el.style(dark_mode_fix_css),
     ],
-    api_transformer=fastapi_app,  # เชื่อมต่อ FastAPI กับ Reflex Backend
+    api_transformer=fastapi_app,
 )

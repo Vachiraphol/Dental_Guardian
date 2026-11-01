@@ -24,3 +24,4 @@ assets/external/
 .DS_Store
 reflex.log
 deploy.exp
+seed_users.py

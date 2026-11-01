@@ -14,8 +14,10 @@ config = rx.Config(
     app_name="dental_clinic_system",
     db_url=database_url,
     backend_host="0.0.0.0",
-    plugins=[
-        rx.plugins.SitemapPlugin(),
-    ],
-    disable_plugins=[],
+    api_url="https://dental-guardian.onrender.com",
+    theme=rx.theme(
+        appearance="light",     # บังคับโหมดสว่างเท่านั้น
+        accent_color="iris",
+        gray_color="slate",
+    ),
 )

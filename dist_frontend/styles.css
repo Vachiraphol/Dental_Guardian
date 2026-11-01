@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --primary-color: #7C69AC;
+    --primary-light: #EFEBF5;
+    --footer-bg: #F0EFEA;
+    color-scheme: light !important;
+}
+
+/* บังคับไม่ให้เปลี่ยนสีตาม Dark mode ของ Browser หรือ Windows */
+@media (prefers-color-scheme: dark) {
+    :root, html, body {
+        color-scheme: light !important;
+        background-color: #FAFAFA !important;
+        color: #1E293B !important;
+    }
+}
+
+body, html, .rt-Text, .rt-Heading, .rt-Button, .rt-Link, .rt-Box, .rt-Flex, .rt-Container {
+    font-family: 'Kanit', sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    background-color: #FAFAFA !important;
+}
+
+/* บังคับสีข้อความแจ้งเตือนสีแดง (เช่น ยังไม่ได้เลือกเวลา, ข้อผิดพลาดต่างๆ) */
+.rt-Text[color="red"],
+.rt-Text[data-accent-color="red"],
+[class*="text-red"],
+[style*="color: red"],
+[style*="color: rgb(239, 68, 68)"],
+[style*="color: rgb(225, 29, 72)"] {
+    color: #E11D48 !important;
+}
+
+/* Animations & Layouts */
+@keyframes fade-in {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+}
+
+@keyframes gradient-x {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.animate-fade-in { animation: fade-in 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-fade-in-delayed { animation: fade-in 1s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards; opacity: 0; }
+.animate-slide-in { animation: slide-in-right 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-float { animation: float 6s ease-in-out infinite; }
+
+.gradient-text {
+    background: linear-gradient(135deg, #7C69AC, #4A90E2) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+}
+
+.gradient-bg-animated {
+    background: linear-gradient(135deg, #F4F1FA, #E9F2F9, #F4F1FA);
+    background-size: 200% 200%;
+    animation: gradient-x 10s ease infinite;
+}
+
+.hover-lift {
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hover-lift:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 40px -5px rgba(142, 78, 208, 0.15), 0 10px 20px -5px rgba(142, 78, 208, 0.1);
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+}
+
+.dg-field .rt-TextFieldRoot,
+.dg-field .rt-TextAreaRoot,
+.dg-field .rt-SelectTrigger { width: 100%; }
+
+@media print { .no-print { display: none !important; } }
+.dg-table-wrap .rt-TableRoot { min-width: 880px; }
+.dg-scroll-x { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.dg-scroll-x::-webkit-scrollbar { display: none; }

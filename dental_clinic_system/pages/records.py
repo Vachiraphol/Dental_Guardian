@@ -5,7 +5,6 @@ import reflex as rx
 from dental_clinic_system.components.dental_chart import dental_chart
 from dental_clinic_system.components.history import chart_badge, entry_item, patient_picker
 from dental_clinic_system.components.layout import staff_page
-from dental_clinic_system.components.ui import card, card_title, empty_state, field, page_header
 from dental_clinic_system.state import (
     AppState,
     ICD10,
@@ -16,6 +15,78 @@ from dental_clinic_system.state import (
     PROCEDURES,
     tooth_label,
 )
+
+
+# --- Custom Light Theme Components สำหรับหน้านี้โดยเฉพาะ ---
+def page_header(title: str, subtitle: str, *actions) -> rx.Component:
+    return rx.box(
+        rx.hstack(
+            rx.vstack(
+                rx.heading(title, size="6", color="#0F172A", weight="bold"),
+                rx.text(subtitle, size="2", color="#64748B"),
+                spacing="1",
+            ),
+            rx.spacer(),
+            *actions,
+            align="center",
+            width="100%",
+        ),
+        background_color="white",
+        border="1px solid #E2E8F0",
+        border_radius="16px",
+        padding="20px 24px",
+        box_shadow="0 4px 20px rgba(80, 60, 140, 0.04)",
+        width="100%",
+    )
+
+
+def card(*children, **props) -> rx.Component:
+    return rx.box(
+        *children,
+        background_color="white",
+        border="1px solid #E2E8F0",
+        border_radius="16px",
+        padding="20px",
+        box_shadow="0 4px 16px rgba(80, 60, 140, 0.04)",
+        width="100%",
+        **props,
+    )
+
+
+def card_title(title: str, *badges) -> rx.Component:
+    return rx.hstack(
+        rx.heading(title, size="4", color="#0F172A", weight="bold"),
+        *badges,
+        align="center",
+        spacing="2",
+        margin_bottom="12px",
+    )
+
+
+def empty_state(text: str, icon: str) -> rx.Component:
+    return rx.center(
+        rx.vstack(
+            rx.icon(tag=icon, size=28, color="#94A3B8"),
+            rx.text(text, size="2", color="#64748B"),
+            align="center",
+            spacing="2",
+            padding_y="24px",
+        ),
+        width="100%",
+    )
+
+
+def field(label: str, control: rx.Component, required: bool = False) -> rx.Component:
+    return rx.vstack(
+        rx.hstack(
+            rx.text(label, size="2", weight="medium", color="#334155"),
+            *([rx.text.span(" *", color="var(--red-9)")] if required else []),
+            spacing="1",
+        ),
+        control,
+        width="100%",
+        spacing="1",
+    )
 
 
 def tooth_picker() -> rx.Component:
@@ -47,7 +118,7 @@ def tooth_picker() -> rx.Component:
 
     return rx.vstack(
         rx.hstack(
-            rx.text("ซี่ฟัน", size="2", weight="medium"),
+            rx.text("ซี่ฟัน", size="2", weight="medium", color="#334155"),
             rx.text.span(" *", color="var(--red-9)"),
             rx.spacer(),
             rx.segmented_control.root(
@@ -104,26 +175,48 @@ def entry_form() -> rx.Component:
             rx.cond(
                 AppState.has_entry_icd,
                 rx.box(
-                    rx.text("คำอธิบายสำหรับผู้ป่วย", size="1", color="var(--slate-10)"),
-                    rx.text(info["th"], weight="bold"),
-                    rx.text(info["code"] + " · " + info["en"], size="1", color="var(--slate-10)"),
+                    rx.text("คำอธิบายสำหรับผู้ป่วย", size="1", color="#64748B"),
+                    rx.text(info["th"], weight="bold", color="#0F172A"),
+                    rx.text(info["code"] + " · " + info["en"], size="1", color="#64748B"),
                     padding="10px",
                     border_radius="8px",
-                    background_color="var(--blue-2)",
-                    border="1px solid var(--blue-5)",
+                    background_color="#EFF6FF",
+                    border="1px solid #BFDBFE",
                     width="100%",
                 ),
             ),
-            field("การรักษา / หัตถการ", rx.select(PROCEDURES, value=AppState.entry_procedure, on_change=AppState.set_entry_procedure,
-                                                   size="3", width="100%")),
-            field("หมายเหตุเพิ่มเติม", rx.text_area(value=AppState.entry_note, on_change=AppState.set_entry_note, rows="3",
-                                                     placeholder="รายละเอียดการรักษา วัสดุที่ใช้ คำแนะนำ ฯลฯ")),
+            field(
+                "การรักษา / หัตถการ",
+                rx.select.root(
+                    rx.select.trigger(placeholder="เลือกหัตถการ", width="100%"),
+                    rx.select.content(*[rx.select.item(p, value=p) for p in PROCEDURES]),
+                    value=AppState.entry_procedure,
+                    on_change=AppState.set_entry_procedure,
+                    size="3",
+                ),
+            ),
+            field(
+                "หมายเหตุเพิ่มเติม",
+                rx.text_area(
+                    value=AppState.entry_note,
+                    on_change=AppState.set_entry_note,
+                    rows="3",
+                    placeholder="รายละเอียดการรักษา วัสดุที่ใช้ คำแนะนำ ฯลฯ",
+                ),
+            ),
             rx.hstack(
-                rx.icon(tag="clock", size=14, color="var(--slate-10)"),
-                rx.text("วัน/เวลาที่บันทึกจะถูกระบุอัตโนมัติ · ผู้บันทึก: " + AppState.user_name, size="1", color="var(--slate-10)"),
+                rx.icon(tag="clock", size=14, color="#64748B"),
+                rx.text("วัน/เวลาที่บันทึกจะถูกระบุอัตโนมัติ · ผู้บันทึก: " + AppState.user_name, size="1", color="#64748B"),
                 align="center",
             ),
-            rx.button(rx.icon(tag="save", size=16), "บันทึกการรักษา", size="3", color_scheme="green", width="100%", on_click=AppState.save_entry),
+            rx.button(
+                rx.icon(tag="save", size=16),
+                "บันทึกการรักษา",
+                size="3",
+                color_scheme="green",
+                width="100%",
+                on_click=AppState.save_entry,
+            ),
             width="100%",
             spacing="3",
         ),
@@ -137,8 +230,13 @@ def records() -> rx.Component:
         page_header(
             "บันทึกการรักษาและผังฟัน",
             "คลิกซี่ฟันบนผัง หรือเลือก/พิมพ์เลขซี่ฟัน แล้วบันทึกการวินิจฉัยและการรักษา",
-            rx.button(rx.icon(tag="file_text", size=14), "ดูเวชระเบียนรวม", variant="soft",
-                      on_click=AppState.open_patient_record(AppState.selected_pid, "/records/summary")),
+            rx.button(
+                rx.icon(tag="file_text", size=14),
+                "ดูเวชระเบียนรวม",
+                variant="soft",
+                color_scheme="purple",
+                on_click=AppState.open_patient_record(AppState.selected_pid, "/records/summary"),
+            ),
         ),
         patient_picker(),
         rx.cond(

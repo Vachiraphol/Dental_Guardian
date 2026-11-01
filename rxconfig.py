@@ -1,32 +1,17 @@
 import os
 import reflex as rx
 
-# ดึงค่าจาก Environment Variable หรือใช้ค่า Default สำหรับ Local Development
-POSTGRES_USER = os.getenv("POSTGRES_USER", "postgres")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password123")  # ใส่รหัสผ่าน PostgreSQL ของคุณ
-POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
-POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
-POSTGRES_DB = os.getenv("POSTGRES_DB", "dental_guardian_db")
+neon_db_url = "postgresql+psycopg2://neondb_owner:npg_coV8lJhdYn1t@ep-wandering-cloud-a1nscrgz.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+database_url = os.getenv("DATABASE_URL", neon_db_url)
 
-DB_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+if database_url:
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif database_url.startswith("postgresql://") and not database_url.startswith("postgresql+"):
+        database_url = database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 config = rx.Config(
     app_name="dental_clinic_system",
-    db_url = "postgresql+psycopg2://postgres:password123@localhost:5432/dental_guardian_db",
-    backend_host="127.0.0.1",
-    backend_port=8000,
-    api_url="http://localhost:8000",
-    plugins=[
-        rx.plugins.SitemapPlugin(),
-        rx.plugins.TailwindV4Plugin(),
-        rx.plugins.RadixThemesPlugin(
-            theme=rx.theme(
-                appearance="light",
-                has_background=True,
-                radius="large",
-                accent_color="purple",
-                gray_color="slate",
-            )
-        ),
-    ],
+    db_url=database_url,
+    backend_host="0.0.0.0",
 )

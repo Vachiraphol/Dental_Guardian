@@ -1340,27 +1340,42 @@ class AppState(rx.State):
         draft = self.booking_draft
         target_date = dt.date.fromisoformat(draft["date"])
         target_time = dt.datetime.strptime(draft["time"], "%H:%M").time()
-        pid = self.current_patient_id if self.is_logged_in and self.current_patient_id else "1"
+
+        # 1. ตรวจสอบ: ห้ามเลือกวันที่ในอดีต
+        if target_date < today():
+            return rx.toast.error("ไม่สามารถจองคิวย้อนหลังได้ กรุณาเลือกวันที่ใหม่อีกครั้ง")
+
+        # 2. ตรวจสอบ: เบอร์โทรศัพท์ต้องเป็นตัวเลข 9-10 หลัก
+        clean_phone = draft.get("phone", "").replace("-", "").strip()
+        if not (clean_phone.isdigit() and len(clean_phone) in (9, 10)):
+            return rx.toast.error("กรุณาระบุหมายเลขโทรศัพท์ให้ถูกต้อง (9-10 หลัก)")
+
+        # กำหนดค่า pid (ดึงจากสถานะคนไข้ที่ล็อกอินอยู่ หรือจาก draft)
+        pid = self.current_patient_id or draft.get("patient_id") or "P-0000"
 
         with rx.session() as session:
-            # ดึงรายการจองทั้งหมดในวันเดียวกัน
-            day_bookings = session.exec(
+            # 3. Conflict Check: ตรวจสอบจำนวนคิวในรอบเวลานั้นอีกครั้ง
+            existing_count = len(session.exec(
                 select(QueueBooking).where(
                     QueueBooking.booking_date == target_date,
+                    QueueBooking.booking_time == target_time,
                     QueueBooking.status.not_in(["ยกเลิก", "ยกเลิกนัด", "ปฏิเสธ"])
                 )
-            ).all()
+            ).all())
 
-            # บันทึกข้อมูลคิวใหม่ลงฐานข้อมูลชั่วคราว
-           # บันทึกข้อมูลคิวใหม่ลงฐานข้อมูลชั่วคราว
+            if existing_count >= 2:
+                # แก้ไข: เพิ่มวงเล็บปิดให้ถูกต้อง
+                return rx.toast.error(f"รอบเวลา {draft['time']} น. มีผู้จองเต็มแล้ว กรุณาเลือกช่วงเวลาอื่น")
+
+            # บันทึกข้อมูลคิวใหม่ลงฐานข้อมูล
             new_booking = QueueBooking(
                 patient_id=pid,
-                patient_name=draft["patient_name"],
-                phone_number=draft["phone"],
+                patient_name=draft.get("patient_name", ""),
+                phone_number=clean_phone,
                 booking_date=target_date,
                 booking_time=target_time,
-                service_type=draft["service"],
-                dentist_name=draft.get("dentist") or "ไม่ระบุ",  # <-- เพิ่มจุดนี้
+                service_type=draft.get("service", "ตรวจสุขภาพช่องปาก"),
+                dentist_name=draft.get("dentist") or "ไม่ระบุ",
                 underlying_disease=draft.get("disease", "ไม่มี"),
                 drug_allergy=draft.get("allergy", "ไม่มี"),
                 status="รออนุมัติ",
@@ -1370,11 +1385,19 @@ class AppState(rx.State):
             session.add(new_booking)
             session.flush()
 
-            # รวมคิวทั้งหมดในวันนั้น แล้วเรียงตามเวลาจอง
+            # แก้ไข: ดึงคิวทั้งหมดของวันเป้าหมายเพื่อนำมาเรียงลำดับใหม่
+            day_bookings = session.exec(
+                select(QueueBooking).where(
+                    QueueBooking.booking_date == target_date,
+                    QueueBooking.id != new_booking.id,
+                    QueueBooking.status.not_in(["ยกเลิก", "ยกเลิกนัด", "ปฏิเสธ"])
+                )
+            ).all()
+
+            # รวมคิวทั้งหมดในวันนั้น แล้วเรียงตามเวลาจองและเวลาสร้าง
             all_today = list(day_bookings) + [new_booking]
             all_today.sort(key=lambda b: (b.booking_time, b.created_at))
 
-            # ใช้รหัสที่มีวันที่กำกับ เช่น Q-20261102-001 เพื่อป้องกันการซ้ำกับวันอื่นในฐานข้อมูล
             date_prefix = target_date.strftime("%Y%m%d")
             assigned_code = ""
             for idx, booking_item in enumerate(all_today, start=1):

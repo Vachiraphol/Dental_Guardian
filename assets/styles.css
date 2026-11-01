@@ -13,11 +13,7 @@ body,
     color-scheme: light !important;
 }
 
-/* ========================================================
-   FORCE STRICT LIGHT THEME (OVERRIDE RADIX & DARK MODE)
-   ======================================================== */
-
-/* 1. บังคับสีพื้นหลังและสีตัวอักษรหลักทั้งระบบ */
+/* บังคับสไตล์ Light Mode ตลอดเวลา */
 body,
 html,
 .radix-themes,
@@ -26,7 +22,7 @@ html,
     color: #1E293B !important;
 }
 
-/* 2. บังคับตัวหนังสือบนแถบ Header, Navbar และเมนูแคปซูล ให้เป็นสีเข้มชัดเจน */
+/* ล็อกสีข้อความแถบ Header / Navbar / แคปซูล */
 header,
 header *,
 nav,
@@ -36,59 +32,44 @@ header span,
 header p,
 nav a,
 nav span,
-nav p,
-.radix-themes:is(.dark, [data-theme='dark']) header a,
-.radix-themes:is(.dark, [data-theme='dark']) header span,
-.radix-themes:is(.dark, [data-theme='dark']) header p,
-.radix-themes:is(.dark, [data-theme='dark']) nav a,
-.radix-themes:is(.dark, [data-theme='dark']) nav span,
-.radix-themes:is(.dark, [data-theme='dark']) nav p {
+nav p {
     color: #1E293B !important;
 }
 
-/* 3. ล็อกพื้นหลังและการ์ดทั้งหมดให้เป็นสีขาว */
+/* ล็อกพื้นหลังกล่อง การ์ด และ Modal */
 .rt-Card,
 .rt-DialogContent,
-div[class*="rt-Card"],
-.radix-themes:is(.dark, [data-theme='dark']) .rt-Card,
-.radix-themes:is(.dark, [data-theme='dark']) .rt-DialogContent {
+div[class*="rt-Card"] {
     background-color: #FFFFFF !important;
     color: #1E293B !important;
-    border-color: #E2E8F0 !important;
+    border: 1px solid #E2E8F0 !important;
 }
 
-/* 4. ล็อกช่อง Input, Textarea, Select ไม่ให้เป็นสีเทาดำมืด */
+/* ล็อก Input, Textarea, Select ให้พื้นหลังขาว ขอบเทาอ่อน ไม่มืด */
 input,
 textarea,
 select,
 .rt-TextFieldRoot,
 .rt-TextFieldInput,
 .rt-TextAreaRoot,
-.rt-SelectTrigger,
-.radix-themes:is(.dark, [data-theme='dark']) input,
-.radix-themes:is(.dark, [data-theme='dark']) textarea,
-.radix-themes:is(.dark, [data-theme='dark']) .rt-TextFieldRoot,
-.radix-themes:is(.dark, [data-theme='dark']) .rt-TextAreaRoot,
-.radix-themes:is(.dark, [data-theme='dark']) .rt-SelectTrigger {
+.rt-SelectTrigger {
     background-color: #FFFFFF !important;
     color: #1E293B !important;
     border: 1px solid #CBD5E1 !important;
 }
 
-/* ป้ายแสดงสถานะ / ข้อความกำกับในช่อง Input */
 input::placeholder,
 textarea::placeholder {
     color: #94A3B8 !important;
 }
 
-/* 5. ปุ่มประเภท Solid (ม่วง) ให้ตัวหนังสือเป็นสีขาวเสมอ */
+/* ปุ่มสีม่วงคงตัวหนังสือขาว */
 .rt-Button[data-variant="solid"],
-.rt-Button[data-variant="solid"] *,
-.rt-Button[data-accent-color="purple"][data-variant="solid"] {
+.rt-Button[data-variant="solid"] * {
     color: #FFFFFF !important;
 }
 
-/* 6. บังคับไม่ให้เปลี่ยนสีตาม Dark mode ของ Browser หรือ Windows */
+/* ปิดการแทรกแซงจาก Dark Mode ของ OS */
 @media (prefers-color-scheme: dark) {
     :root, html, body, .radix-themes, .dark, [data-theme='dark'] {
         color-scheme: light !important;
@@ -97,20 +78,16 @@ textarea::placeholder {
     }
 }
 
-/* Typography & Reset */
 body, html, .rt-Text, .rt-Heading, .rt-Button, .rt-Link, .rt-Box, .rt-Flex, .rt-Container {
     font-family: 'Kanit', sans-serif !important;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* บังคับสีข้อความแจ้งเตือนสีแดง */
 .rt-Text[color="red"],
 .rt-Text[data-accent-color="red"],
 [class*="text-red"],
-[style*="color: red"],
-[style*="color: rgb(239, 68, 68)"],
-[style*="color: rgb(225, 29, 72)"] {
+[style*="color: red"] {
     color: #E11D48 !important;
 }
 

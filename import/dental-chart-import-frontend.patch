@@ -1,0 +1,337 @@
+diff --git a/BACKEND_HANDOFF.md b/BACKEND_HANDOFF.md
+index b92a05f..2180141 100644
+--- a/BACKEND_HANDOFF.md
++++ b/BACKEND_HANDOFF.md
+@@ -22,6 +22,7 @@ grep -rn "TODO(backend)" dental_clinic_system
+ | `appointments` | `id, kind` (`จองคิว` / `นัดครั้งถัดไป`), `patient_id, patient_name, phone, date, time, service, dentist, status, disease, allergy, note, purpose, reason, created` | `format_appointment` (`date_th, weekday`) |
+ | `entries` (ประวัติการรักษา) | `id, patient_id, tooth` (`"1"`–`"32"`), `icd, procedure, note, dentist, timestamp` | `format_entry` (`icd_th, tooth_label, ts_th`) |
+ | `available_slots` | `time, left` (จำนวนคิวที่เหลือ), `available` (`"1"` / `"0"`) ของวันที่ `booking_date` | – |
++| `import_rows` (ตัวอย่างไฟล์ที่หมอนำเข้า) | `row` (เลขแถวในไฟล์), `date_th, tooth, icd, procedure, note, status` (`ok` / `dup` / `error`), `message` (เหตุผลเมื่อเป็น `error`) | – |
+ 
+ ค่า `status` ของนัดหมายที่หน้าเว็บรองรับ: `รออนุมัติ, ยืนยันแล้ว, มาตามนัด, เลื่อนนัด, ยกเลิกนัด, ปฏิเสธ`
+ 
+@@ -43,6 +44,8 @@ grep -rn "TODO(backend)" dental_clinic_system
+ | 5.3 | `mark_arrived`, `cancel_appt`, `reschedule`, `create_next_appt` | มาตามนัด / ยกเลิก / เลื่อนนัด / ออกใบนัดครั้งถัดไป |
+ | 5.3 | `save_schedule` | บันทึกตารางเวลาทันตแพทย์ (`schedule_dentist`) |
+ | 5.4 | `save_entry` | บันทึกการรักษา (frontend ตรวจซี่ฟันและ ICD-10 ให้แล้ว) |
++| 5.4 | `handle_chart_import` | อ่านไฟล์ `.csv` / `.xlsx` ที่หมออัปโหลด (คอลัมน์: วันที่รักษา, ซี่ฟัน, ICD-10, การรักษา, หมายเหตุ, ทันตแพทย์) ตรวจแต่ละแถว แล้วใส่ผลใน `import_rows` |
++| 5.4 | `confirm_chart_import` | ตรวจว่าเป็น role `dentist` แล้วบันทึกแถว `ok` ลงประวัติการรักษาของ `selected_pid` โดยใช้วันที่รักษาจากไฟล์ แล้วโหลด `entries` ใหม่ (ปุ่มยืนยันกดได้เมื่อมีแถว `ok` และไม่มีแถว `error`) |
+ 
+ ## 3. การจำกัดสิทธิ์การเข้าหน้า
+ 
+diff --git a/dental_clinic_system/pages/records.py b/dental_clinic_system/pages/records.py
+index 2cd4f71..2123afb 100644
+--- a/dental_clinic_system/pages/records.py
++++ b/dental_clinic_system/pages/records.py
+@@ -16,6 +16,9 @@ from dental_clinic_system.state import (
+     tooth_label,
+ )
+ 
++IMPORT_UPLOAD_ID = "chart_import"
++IMPORT_MAX_BYTES = 2 * 1024 * 1024
++
+ 
+ # --- Custom Light Theme Components สำหรับหน้านี้โดยเฉพาะ ---
+ def page_header(title: str, subtitle: str, *actions) -> rx.Component:
+@@ -30,6 +33,7 @@ def page_header(title: str, subtitle: str, *actions) -> rx.Component:
+             *actions,
+             align="center",
+             width="100%",
++            wrap="wrap",
+         ),
+         background_color="white",
+         border="1px solid #E2E8F0",
+@@ -223,6 +227,137 @@ def entry_form() -> rx.Component:
+     )
+ 
+ 
++def import_status(row) -> rx.Component:
++    return rx.match(
++        row["status"],
++        ("ok", rx.badge("พร้อมนำเข้า", color_scheme="green", variant="soft")),
++        ("dup", rx.badge("ซ้ำ · ข้าม", color_scheme="gray", variant="soft")),
++        rx.badge("ต้องแก้ไข", color_scheme="red", variant="soft"),
++    )
++
++
++def import_row(row) -> rx.Component:
++    return rx.table.row(
++        rx.table.cell(row["row"]),
++        rx.table.cell(row["date_th"]),
++        rx.table.cell(row["tooth"]),
++        rx.table.cell(row["icd"]),
++        rx.table.cell(row["procedure"]),
++        rx.table.cell(rx.text(row["note"], size="2", max_width="200px")),
++        rx.table.cell(
++            rx.vstack(
++                import_status(row),
++                rx.cond(row["message"] != "", rx.text(row["message"], size="1", color="var(--red-11)")),
++                spacing="1",
++            )
++        ),
++    )
++
++
++def import_preview() -> rx.Component:
++    counts = AppState.import_counts
++    return rx.vstack(
++        rx.hstack(
++            rx.badge("พร้อมนำเข้า ", counts["ok"], color_scheme="green", variant="soft"),
++            rx.badge("ซ้ำ ", counts["dup"], color_scheme="gray", variant="soft"),
++            rx.badge("ต้องแก้ไข ", counts["error"], color_scheme="red", variant="soft"),
++            spacing="2",
++            wrap="wrap",
++        ),
++        rx.cond(
++            AppState.import_teeth.length() > 0,
++            rx.text("ซี่ฟันที่จะมีข้อมูลเพิ่ม: ", AppState.import_teeth.join(", "), size="2", color="#334155"),
++        ),
++        rx.cond(
++            counts["error"] > 0,
++            rx.callout("แก้แถวที่มีปัญหาในไฟล์ แล้วอัปโหลดใหม่ ระบบจะยังไม่บันทึกข้อมูลใดๆ", icon="circle_alert",
++                       color_scheme="red", size="1", width="100%"),
++        ),
++        rx.box(
++            rx.table.root(
++                rx.table.header(rx.table.row(*[rx.table.column_header_cell(h) for h in
++                                               ["แถว", "วันที่รักษา", "ซี่ฟัน", "ICD-10", "การรักษา", "หมายเหตุ", "สถานะ"]])),
++                rx.table.body(rx.foreach(AppState.import_rows, import_row)),
++                size="1",
++                width="100%",
++            ),
++            width="100%",
++            max_height="320px",
++            overflow="auto",
++        ),
++        width="100%",
++        spacing="3",
++    )
++
++
++def import_dialog() -> rx.Component:
++    return rx.dialog.root(
++        rx.dialog.content(
++            rx.dialog.title("นำเข้าไฟล์สู่ผังฟัน"),
++            rx.dialog.description(
++                "นำเข้าให้ผู้ป่วย: ",
++                rx.text.strong(AppState.selected_patient_option),
++                size="2",
++                color="#334155",
++            ),
++            rx.vstack(
++                rx.upload(
++                    rx.vstack(
++                        rx.icon(tag="file_up", size=24, color="#64748B"),
++                        rx.text("ลากไฟล์มาวาง หรือคลิกเพื่อเลือกไฟล์", size="2", color="#334155"),
++                        rx.text("รองรับ .csv และ .xlsx ไม่เกิน 2 MB", size="1", color="#64748B"),
++                        align="center",
++                        spacing="1",
++                    ),
++                    id=IMPORT_UPLOAD_ID,
++                    accept={
++                        "text/csv": [".csv"],
++                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
++                    },
++                    multiple=False,
++                    max_files=1,
++                    max_size=IMPORT_MAX_BYTES,
++                    on_drop=AppState.handle_chart_import(rx.upload_files(upload_id=IMPORT_UPLOAD_ID)),
++                    on_drop_rejected=rx.toast.error("รองรับเฉพาะไฟล์ .csv และ .xlsx ขนาดไม่เกิน 2 MB ครั้งละ 1 ไฟล์"),
++                    border="1px dashed #CBD5E1",
++                    border_radius="12px",
++                    padding="20px",
++                    width="100%",
++                    cursor="pointer",
++                ),
++                rx.text("คอลัมน์: วันที่รักษา, ซี่ฟัน (FDI), ICD-10, การรักษา, หมายเหตุ, ทันตแพทย์", size="1", color="#64748B"),
++                rx.cond(AppState.import_file_name != "", rx.text("ไฟล์: " + AppState.import_file_name, size="2", color="#334155")),
++                rx.cond(
++                    AppState.import_error != "",
++                    rx.callout(AppState.import_error, icon="circle_alert", color_scheme="red", size="1", width="100%"),
++                ),
++                rx.cond(AppState.import_rows.length() > 0, import_preview()),
++                rx.hstack(
++                    rx.dialog.close(rx.button("ยกเลิก", type="button", variant="soft", color_scheme="gray")),
++                    rx.button(
++                        "ยืนยันนำเข้า ", AppState.import_counts["ok"], " รายการ",
++                        type="button",
++                        color_scheme="green",
++                        disabled=~AppState.can_confirm_import,
++                        on_click=AppState.confirm_chart_import,
++                    ),
++                    justify="end",
++                    width="100%",
++                    spacing="2",
++                ),
++                width="100%",
++                spacing="3",
++                margin_top="12px",
++            ),
++            # a fixed width, or the preview table stretches the dialog past the screen on phones
++            width="760px",
++            max_width="calc(100vw - 32px)",
++        ),
++        open=AppState.import_open,
++        on_open_change=AppState.set_import_open,
++    )
++
++
+ @rx.page(route="/records", title="บันทึกการรักษาและผังฟัน - Dental Guardian")
+ def records() -> rx.Component:
+     return staff_page(
+@@ -230,6 +365,16 @@ def records() -> rx.Component:
+         page_header(
+             "บันทึกการรักษาและผังฟัน",
+             "คลิกซี่ฟันบนผัง หรือเลือก/พิมพ์เลขซี่ฟัน แล้วบันทึกการวินิจฉัยและการรักษา",
++            rx.cond(
++                AppState.is_dentist & AppState.has_patients,
++                rx.button(
++                    rx.icon(tag="file_up", size=14),
++                    "นำเข้าไฟล์",
++                    variant="soft",
++                    color_scheme="green",
++                    on_click=AppState.set_import_open(True),
++                ),
++            ),
+             rx.button(
+                 rx.icon(tag="file_text", size=14),
+                 "ดูเวชระเบียนรวม",
+@@ -238,6 +383,7 @@ def records() -> rx.Component:
+                 on_click=AppState.open_patient_record(AppState.selected_pid, "/records/summary"),
+             ),
+         ),
++        import_dialog(),
+         patient_picker(),
+         rx.cond(
+             AppState.has_patients,
+diff --git a/dental_clinic_system/state.py b/dental_clinic_system/state.py
+index 5904b53..d080094 100644
+--- a/dental_clinic_system/state.py
++++ b/dental_clinic_system/state.py
+@@ -311,6 +311,12 @@ class AppState(rx.State):
+     selected_tooth: str = ""         # ซี่ฟันที่เลือก
+     my_selected_tooth: str = ""      # ซี่ฟันที่คนไข้เลือกดูในหน้า my_history
+ 
++    # --- นำเข้าไฟล์ประวัติการรักษาเข้าผังฟัน (เฉพาะทันตแพทย์) ---
++    import_open: bool = False
++    import_file_name: str = ""
++    import_error: str = ""
++    import_rows: list[dict[str, str]] = []
++
+     @rx.event
+     def set_chart_mode(self, mode: str):
+         """สลับระหว่างผังฟันแท้และผังฟันน้ำนมด้วยตนเองผ่าน Dropdown."""
+@@ -499,6 +505,10 @@ class AppState(rx.State):
+     def is_staff(self) -> bool:
+         return self.user_role == "staff"
+ 
++    @rx.var
++    def is_dentist(self) -> bool:
++        return self.user_role == "dentist"
++
+     @rx.var
+     def user_initials(self) -> str:
+         name = self.user_name.replace("ทพญ. ", "").replace("ทพ. ", "").replace("พย. ", "")
+@@ -925,6 +935,20 @@ class AppState(rx.State):
+     def sel_tooth_entries(self) -> list[dict[str, str]]:
+         return [e for e in self.sel_entries if e["tooth"] == self.selected_tooth]
+ 
++    @rx.var
++    def import_counts(self) -> dict[str, int]:
++        statuses = [r["status"] for r in self.import_rows]
++        return {status: statuses.count(status) for status in ("ok", "dup", "error")}
++
++    @rx.var
++    def import_teeth(self) -> list[str]:
++        return sorted({r["tooth"] for r in self.import_rows if r["status"] == "ok"})
++
++    @rx.var
++    def can_confirm_import(self) -> bool:
++        # all or nothing: a half-imported history is worse than asking for a corrected file
++        return self.import_counts["ok"] > 0 and self.import_counts["error"] == 0
++
+     @rx.var
+     def selected_tooth_label(self) -> str:
+         return tooth_label(self.selected_tooth)
+@@ -2363,7 +2387,29 @@ class AppState(rx.State):
+         self.entry_note = ""
+         self.load_schedule_data()
+         return rx.toast.success(f"บันทึกการรักษาซี่ {self.entry_tooth} เรียบร้อยแล้ว")
+-    
++
++    @rx.event
++    def set_import_open(self, value: bool):
++        self.import_open = value
++        self.import_file_name = self.import_error = ""
++        self.import_rows = []
++
++    @rx.event
++    async def handle_chart_import(self, files: list[rx.UploadFile]):
++        if not files:
++            return
++        self.set_import_open(True)
++        self.import_file_name = files[0].name or ""
++        # TODO(backend): อ่าน files[0] (.csv / .xlsx) ของผู้ป่วย self.selected_pid แล้วใส่ผลตรวจแต่ละแถวใน
++        # self.import_rows (ฟิลด์ตาม BACKEND_HANDOFF.md) ถ้าอ่านไฟล์ไม่ได้ให้ตั้ง self.import_error
++        return not_connected("นำเข้าไฟล์เข้าผังฟัน")
++
++    @rx.event
++    def confirm_chart_import(self):
++        # TODO(backend): ตรวจว่า user_role เป็น "dentist" แล้วบันทึกแถว status "ok" ลงประวัติการรักษาของ
++        # self.selected_pid โดยใช้วันที่รักษาจากไฟล์ จากนั้นโหลด self.entries ใหม่และเรียก self.set_import_open(False)
++        return not_connected("นำเข้าไฟล์เข้าผังฟัน")
++
+     @rx.event
+     def select_my_tooth(self, tooth: str):
+         """เลือก/ยกเลิกเลือกซี่ฟันในหน้าประวัติการรักษาของคนไข้ (/my-history)"""
+diff --git a/reflex.lock/bun.lock b/reflex.lock/bun.lock
+index 4685870..b5d58e4 100644
+--- a/reflex.lock/bun.lock
++++ b/reflex.lock/bun.lock
+@@ -13,6 +13,7 @@
+         "react": "19.2.8",
+         "react-debounce-input": "3.3.0",
+         "react-dom": "19.2.8",
++        "react-dropzone": "15.0.0",
+         "react-error-boundary": "6.1.2",
+         "react-helmet": "6.1.0",
+         "react-router": "8.3.1",
+@@ -278,6 +279,8 @@
+ 
+     "aria-hidden": ["aria-hidden@1.2.6", "", { "dependencies": { "tslib": "^2.0.0" } }, "sha512-ik3ZgC9dY/lYVVM++OISsaYDeg1tb0VtP5uL3ouh1koGOaUMDPpbFIei4JkFimWUFPn90sbMNMXQAIVOlnYKJA=="],
+ 
++    "attr-accept": ["attr-accept@2.2.5", "", {}, "sha512-0bDNnY/u6pPwHDMoF0FieU354oBi0a8rD9FcsLwzcGWbc8KS8KPIi7y+s13OlVY+gMWc/9xEMUgNE6Qm8ZllYQ=="],
++
+     "autoprefixer": ["autoprefixer@10.5.4", "", { "dependencies": { "browserslist": "^4.28.6", "caniuse-lite": "^1.0.30001806", "fraction.js": "^5.3.4", "picocolors": "^1.1.1", "postcss-value-parser": "^4.2.0" }, "peerDependencies": { "postcss": "^8.1.0" }, "bin": { "autoprefixer": "bin/autoprefixer" } }, "sha512-MaU0U/za7N3r6brxD4YB/l4NSrFzLPlANv6wEuQVaIPlD3L4W9rFcQPbL/EilY9BHhHvhfcz3gInDLrEtWT4EA=="],
+ 
+     "babel-dead-code-elimination": ["babel-dead-code-elimination@1.0.12", "", { "dependencies": { "@babel/core": "^7.23.7", "@babel/parser": "^7.23.6", "@babel/traverse": "^7.23.7", "@babel/types": "^7.23.6" } }, "sha512-GERT7L2TiYcYDtYk1IpD+ASAYXjKbLTDPhBtYj7X1NuRMDTMtAx9kyBenub1Ev41lo91OHCKdmP+egTDmfQ7Ig=="],
+@@ -342,6 +345,8 @@
+ 
+     "fdir": ["fdir@6.5.0", "", { "peerDependencies": { "picomatch": "^3 || ^4" }, "optionalPeers": ["picomatch"] }, "sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg=="],
+ 
++    "file-selector": ["file-selector@2.1.2", "", { "dependencies": { "tslib": "^2.7.0" } }, "sha512-QgXo+mXTe8ljeqUFaX3QVHc5osSItJ/Km+xpocx0aSqWGMSCf6qYs/VnzZgS864Pjn5iceMRFigeAV7AfTlaig=="],
++
+     "find-root": ["find-root@1.1.0", "", {}, "sha512-NKfW6bec6GfKc0SGx1e07QZY9PE99u0Bft/0rzSD5k3sO/vwkVUpDUKVm5Gpp5Ue3YfShPFTX2070tDs5kB9Ng=="],
+ 
+     "fraction.js": ["fraction.js@5.3.4", "", {}, "sha512-1X1NTtiJphryn/uLQz3whtY6jK3fTqoE3ohKs0tT+Ujr1W59oopxmoEh7Lu5p6vBaPbgoM0bzveAW4Qi5RyWDQ=="],
+@@ -454,6 +459,8 @@
+ 
+     "react-dom": ["react-dom@19.2.8", "", { "dependencies": { "scheduler": "^0.27.0" }, "peerDependencies": { "react": "^19.2.8" } }, "sha512-rVprimfGBG3DR+Tq0IQG2DT5PxKth1WIGDmj5yPmlzr4YBe7uyE+Du4oVqTDXZSHGGGXRtTJEGSSePyQCMBglQ=="],
+ 
++    "react-dropzone": ["react-dropzone@15.0.0", "", { "dependencies": { "attr-accept": "^2.2.4", "file-selector": "^2.1.0", "prop-types": "^15.8.1" }, "peerDependencies": { "react": ">= 16.8 || 18.0.0" } }, "sha512-lGjYV/EoqEjEWPnmiSvH4v5IoIAwQM2W4Z1C0Q/Pw2xD0eVzKPS359BQTUMum+1fa0kH2nrKjuavmTPOGhpLPg=="],
++
+     "react-error-boundary": ["react-error-boundary@6.1.2", "", { "peerDependencies": { "react": "^18.0.0 || ^19.0.0" } }, "sha512-3DpCr5HVdZ0caUjYE/kIHBEJN0mNP3ZCgf16c48uJ5TbWjorKVp+YG8W3XqlJ7vJAVNw6wNIImyPXmFydwmyng=="],
+ 
+     "react-fast-compare": ["react-fast-compare@3.2.2", "", {}, "sha512-nsO+KSNgo1SbJqJEYRE9ERzo7YtYbou/OqjSQKxV7jcKox7+usiUVZOAC+XnDOABXggQTno0Y1CpVnuWEc1boQ=="],
+diff --git a/reflex.lock/package.json b/reflex.lock/package.json
+index 791999b..ee16c1e 100644
+--- a/reflex.lock/package.json
++++ b/reflex.lock/package.json
+@@ -14,6 +14,7 @@
+     "react": "19.2.8",
+     "react-debounce-input": "3.3.0",
+     "react-dom": "19.2.8",
++    "react-dropzone": "15.0.0",
+     "react-error-boundary": "6.1.2",
+     "react-helmet": "6.1.0",
+     "react-router": "8.3.1",

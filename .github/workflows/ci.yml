@@ -42,7 +42,7 @@ jobs:
         run: python -m pip check
 
       - name: Check Python syntax
-        run: python -m compileall --quiet dental_clinic_system alembic rxconfig.py
+        run: python -m compileall -q dental_clinic_system alembic rxconfig.py
 
       - name: Initialize Reflex app
         run: reflex init

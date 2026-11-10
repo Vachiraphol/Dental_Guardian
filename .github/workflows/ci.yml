@@ -17,6 +17,20 @@ jobs:
     name: Python ${{ matrix.python-version }} checks
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: dental_guardian
+          POSTGRES_USER: ci
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d dental_guardian"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     strategy:
       fail-fast: false
       matrix:
@@ -40,6 +54,10 @@ jobs:
 
       - name: Check dependency consistency
         run: python -m pip check
+
+      - name: Prepare database schema for Reflex compilation
+        run: |
+          python -c "import os; from sqlmodel import SQLModel, create_engine; import dental_clinic_system.backend.models; SQLModel.metadata.create_all(create_engine(os.environ['DATABASE_URL']))"
 
       - name: Check Python syntax
         run: python -m compileall -q dental_clinic_system alembic rxconfig.py

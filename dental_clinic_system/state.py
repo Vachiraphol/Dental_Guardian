@@ -249,6 +249,15 @@ class AppState(rx.State):
                 rx.toast.error("คุณไม่มีสิทธิ์เข้าถึงหน้านี้"),
                 rx.redirect("/profile"),
             ]
+    
+    @rx.event
+    def check_login(self):
+        """ตรวจสอบสิทธิ์: หากยังไม่เข้าสู่ระบบให้เด้งกลับไปหน้า /login"""
+        if not self.is_logged_in:
+            return [
+                rx.toast.warning("กรุณาเข้าสู่ระบบก่อนเข้าใช้งานหน้านี้"),
+                rx.redirect("/login"),
+            ]
 
     # ---- session (5.1) ----
     user_role: str = ""
@@ -1084,33 +1093,66 @@ class AppState(rx.State):
 
     @rx.event
     def register(self, form: dict):
-        """สมัครสมาชิก: บันทึกข้อมูลลงตาราง User และสร้างเวชระเบียนใน Patient"""
+        """สมัครสมาชิก: ตรวจสอบรูปแบบข้อมูลและบันทึกลงตาราง User และ Patient"""
+        import re
         self.register_error = ""
         first_name = (form.get("first_name") or "").strip()
         last_name = (form.get("last_name") or "").strip()
-        phone = (form.get("phone") or "").strip()
+        phone = (form.get("phone") or "").strip().replace("-", "")
+        national_id = (form.get("national_id") or "").strip().replace("-", "")
+        dob_str = (form.get("dob") or "").strip()
         email = (form.get("email") or "").strip().lower()
         password = form.get("password") or ""
         confirm = form.get("confirm") or ""
 
-        if not first_name or not last_name or not phone or not email or not password:
+        if not first_name or not last_name or not phone or not email or not password or not dob_str:
             self.register_error = "กรุณากรอกข้อมูลที่มีเครื่องหมาย * ให้ครบถ้วน"
+            return
+
+        # 1. ตรวจสอบรูปแบบอีเมล
+        if not re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", email):
+            self.register_error = "รูปแบบอีเมลไม่ถูกต้อง"
+            return
+
+        # 2. ตรวจสอบเบอร์โทรศัพท์ (ขึ้นต้นด้วย 0 และมี 10 หลัก)
+        if not (phone.startswith("0") and len(phone) == 10 and phone.isdigit()):
+            self.register_error = "เบอร์โทรศัพท์ต้องขึ้นต้นด้วย 0 และเป็นตัวเลข 10 หลักเท่านั้น"
+            return
+
+        # 3. ตรวจสอบเลขบัตรประชาชน (ถ้ามีการกรอก ต้องเป็นตัวเลข 13 หลัก)
+        if national_id and not (len(national_id) == 13 and national_id.isdigit()):
+            self.register_error = "หมายเลขบัตรประชาชนต้องเป็นตัวเลข 13 หลักเท่านั้น"
+            return
+
+        # 4. ตรวจสอบวันเกิด (ปีปฏิทินห้ามเกินปีปัจจุบัน)
+        try:
+            dob_val = dt.date.fromisoformat(dob_str)
+            current_year = today().year
+            birth_year = dob_val.year - 543 if dob_val.year > 2500 else dob_val.year
+            if birth_year > current_year or dob_val > today():
+                self.register_error = "ปีเกิดในปฏิทินห้ามเกินปีปัจจุบัน"
+                return
+        except ValueError:
+            self.register_error = "รูปแบบวันที่ไม่ถูกต้อง (ต้องเป็น วัน/เดือน/ปี)"
+            return
+
+        # 5. ตรวจสอบความซับซ้อนของรหัสผ่าน
+        if len(password) < 8:
+            self.register_error = "รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร"
+            return
+        if not (re.search(r"[A-Z]", password) and re.search(r"[a-z]", password) and re.search(r"\d", password)):
+            self.register_error = "รหัสผ่านต้องประกอบด้วยตัวพิมพ์ใหญ่ (A-Z), ตัวพิมพ์เล็ก (a-z) และตัวเลข (0-9)"
             return
         if password != confirm:
             self.register_error = "รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน"
             return
-        if len(password) < 8:
-            self.register_error = "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร"
-            return
 
         with rx.session() as session:
-            # เช็กอีเมลซ้ำ
             existing_user = session.exec(select(User).where(User.username == email)).first()
             if existing_user:
                 self.register_error = "อีเมลนี้ถูกใช้งานในระบบแล้ว"
                 return
 
-            # 1. บันทึกบัญชีผู้ใช้งาน
             new_user = User(
                 username=email,
                 password_hash=password,
@@ -1123,22 +1165,13 @@ class AppState(rx.State):
             session.commit()
             session.refresh(new_user)
 
-            # แปลงวันเกิด
-            dob_val = None
-            if form.get("dob"):
-                try:
-                    dob_val = dt.date.fromisoformat(form.get("dob"))
-                except ValueError:
-                    pass
-
-            # 2. บันทึกเวชระเบียนผู้ป่วย
             patient_count = len(session.exec(select(Patient)).all())
             hn_code = f"P-{patient_count + 1:04d}"
 
             new_patient = Patient(
                 user_id=new_user.id,
                 hn_code=hn_code,
-                national_id=form.get("national_id") or None,
+                national_id=national_id or None,
                 first_name=first_name,
                 last_name=last_name,
                 email=email,

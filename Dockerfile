@@ -32,9 +32,9 @@ COPY . .
 RUN reflex init
 RUN reflex export --no-zip
 
-# กำหนดพอร์ตสำหรับ Render (ค่าเริ่มต้น 10000)
+# กำหนดพอร์ตสำหรับ Render
 ENV PORT=10000
 EXPOSE ${PORT}
 
-# 6. รัน Backend ที่ทำหน้าที่ Serve Static Frontend ในตัว
-CMD ["sh", "-c", "reflex run --env prod --backend-only --backend-host 0.0.0.0 --backend-port $PORT"]
+# 6. รัน Backend FastAPI/Uvicorn โดยตรงบน 0.0.0.0:$PORT เพื่อให้ Render จับพอร์ตได้ทันที
+CMD ["sh", "-c", "uvicorn dental_clinic_system.dental_clinic_system:app --host 0.0.0.0 --port ${PORT:-10000}"]

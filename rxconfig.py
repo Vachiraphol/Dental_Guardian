@@ -14,6 +14,7 @@ config = rx.Config(
     app_name="dental_clinic_system",
     db_url=database_url,
     backend_host="0.0.0.0",
+    backend_port=int(os.getenv("PORT", 10000)),
     api_url="https://dental-guardian.onrender.com",
     show_reflex_badge=False,
     plugins=[

@@ -58,6 +58,21 @@ nav p:not(.rt-Button *) {
     color: #1E293B !important;
 }
 
+/* จัดให้โลโก้ตรง Header อยู่กึ่งกลางแนวตั้งพอดีกับข้อความ Dental Guardian / Dental Clinic */
+.dg-header .dg-brand-link,
+.dg-header .dg-brand-link > div,
+.dg-header .dg-brand-link .rt-Flex,
+.dg-header .dg-brand-link .rt-HStack {
+    display: flex !important;
+    align-items: center !important;
+}
+
+.dg-header .dg-brand-link .rt-VStack {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+}
+
 .rt-Card,
 .rt-DialogContent,
 .radix-themes:is(.dark, [data-theme='dark']) .rt-Card,
@@ -118,9 +133,21 @@ textarea::placeholder {
 }
 
 /* ========================================================
-   3. TYPOGRAPHY & UTILITIES
+   3. TYPOGRAPHY & UTILITIES (FORCE KANIT EVERYWHERE)
    ======================================================== */
-body, html, .rt-Text, .rt-Heading, .rt-Button, .rt-Link, .rt-Box, .rt-Flex, .rt-Container {
+body,
+html,
+.rt-Text,
+.rt-Heading,
+.rt-Button,
+.rt-Link,
+.rt-Box,
+.rt-Flex,
+.rt-Container,
+.rt-SegmentedControlRoot,
+.rt-SegmentedControlItem,
+.rt-SegmentedControlItem *,
+.rt-SegmentedControlItemLabel {
     font-family: 'Kanit', sans-serif !important;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -227,6 +254,14 @@ a[href*="reflex.dev"] * {
 
 .rt-SegmentedControlIndicator {
     display: none !important;
+}
+
+.rt-SegmentedControlItem,
+.rt-SegmentedControlItem *,
+.rt-SegmentedControlItemLabel {
+    font-family: 'Kanit', sans-serif !important;
+    font-size: 15px !important;
+    letter-spacing: 0 !important;
 }
 
 .rt-SegmentedControlItem {
@@ -453,7 +488,7 @@ form button[type="submit"].rt-Button {
         font-size: 13px !important;
     }
     main .rt-Card {
-        max-width: 620px !important;
+        max-width: 640px !important;
         margin-left: auto !important;
         margin-right: auto !important;
     }
@@ -479,6 +514,7 @@ form button[type="submit"].rt-Button {
     .dg-header .dg-brand-link .rt-Flex,
     .dg-header .dg-brand-link .rt-HStack {
         gap: 6px !important;
+        align-items: center !important;
     }
     .dg-header .dg-brand-link .rt-Text:first-of-type {
         font-size: 14px !important;
@@ -555,13 +591,14 @@ main .rt-Card > .rt-VStack {
     }
 }
 
-/* ป้องกันช่องเลือกวัน & ช่องเลือกช่วงเวลา ("ว่าง 2 คิว" / "นอกเวลาทำการ") ถูกบีบจนตกขอบล่าง */
+/* จัดให้ข้อความในช่องเลือกวัน & ช่องเลือกช่วงเวลา ("ว่าง 2 คิว" / "นอกเวลาทำการ") อยู่กึ่งกลางทุกบรรทัด */
 main .rt-Card .rt-Grid button,
 main .rt-Card .rt-Grid [role="button"],
-main .rt-Card .rt-Grid > div {
+main .rt-Card .rt-Grid > div,
+main .rt-Card .rt-Grid > div > div {
     height: auto !important;
-    min-height: 56px !important;
-    padding: 8px 6px !important;
+    min-height: 58px !important;
+    padding: 8px 4px !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
@@ -572,10 +609,18 @@ main .rt-Card .rt-Grid > div {
     overflow: visible !important;
 }
 
-main .rt-Card .rt-Grid button .rt-Text,
-main .rt-Card .rt-Grid [role="button"] .rt-Text,
-main .rt-Card .rt-Grid > div .rt-Text {
+main .rt-Card .rt-Grid button *,
+main .rt-Card .rt-Grid [role="button"] *,
+main .rt-Card .rt-Grid > div *,
+main .rt-Card .rt-Grid .rt-Text,
+main .rt-Card .rt-Grid span,
+main .rt-Card .rt-Grid p {
+    width: 100% !important;
     text-align: center !important;
+    justify-content: center !important;
+    align-items: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
     line-height: 1.25 !important;
     display: block !important;
 }

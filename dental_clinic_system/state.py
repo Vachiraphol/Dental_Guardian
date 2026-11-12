@@ -2449,19 +2449,185 @@ class AppState(rx.State):
 
     @rx.event
     async def handle_chart_import(self, files: list[rx.UploadFile]):
+        """อ่านไฟล์ .csv / .xlsx ตรวจสอบแต่ละแถว และแสดงตารางตัวอย่างก่อนยืนยัน"""
         if not files:
             return
         self.set_import_open(True)
-        self.import_file_name = files[0].name or ""
-        # TODO(backend): อ่าน files[0] (.csv / .xlsx) ของผู้ป่วย self.selected_pid แล้วใส่ผลตรวจแต่ละแถวใน
-        # self.import_rows (ฟิลด์ตาม BACKEND_HANDOFF.md) ถ้าอ่านไฟล์ไม่ได้ให้ตั้ง self.import_error
-        return not_connected("นำเข้าไฟล์เข้าผังฟัน")
+        upload_file = files[0]
+        filename = upload_file.name or ""
+        self.import_file_name = filename
+
+        if self.user_role != "dentist":
+            self.import_error = "เฉพาะทันตแพทย์เท่านั้นที่สามารถนำเข้าไฟล์สู่ผังฟันได้"
+            return
+
+        if not self.selected_pid:
+            self.import_error = "กรุณาเลือกผู้ป่วยก่อนนำเข้าไฟล์"
+            return
+
+        try:
+            raw_bytes = await upload_file.read()
+            raw_rows: list[dict[str, str]] = []
+
+            if filename.lower().endswith(".csv"):
+                import csv
+                import io
+                text = raw_bytes.decode("utf-8-sig")
+                reader = csv.DictReader(io.StringIO(text))
+                for r in reader:
+                    raw_rows.append({str(k).strip(): str(v or "").strip() for k, v in r.items() if k is not None})
+            elif filename.lower().endswith(".xlsx"):
+                import io
+                import openpyxl
+                wb = openpyxl.load_workbook(io.BytesIO(raw_bytes), data_only=True)
+                ws = wb.active
+                rows_iter = list(ws.iter_rows(values_only=True))
+                if len(rows_iter) < 2:
+                    self.import_error = "ไม่พบข้อมูลในไฟล์ Excel"
+                    return
+                headers = [str(h or "").strip() for h in rows_iter[0]]
+                for row_vals in rows_iter[1:]:
+                    if not any(row_vals):
+                        continue
+                    row_dict = {}
+                    for idx, h in enumerate(headers):
+                        if h:
+                            val = row_vals[idx] if idx < len(row_vals) else ""
+                            if hasattr(val, "strftime"):
+                                val = val.strftime("%Y-%m-%d")
+                            row_dict[h] = str(val or "").strip()
+                    raw_rows.append(row_dict)
+            else:
+                self.import_error = "รองรับเฉพาะไฟล์ .csv และ .xlsx เท่านั้น"
+                return
+
+            if not raw_rows:
+                self.import_error = "ไฟล์ว่างเปล่า ไม่มีรายการให้ตรวจสอบ"
+                return
+
+            # ชุดข้อมูลสำหรับตรวจสอบความถูกต้อง
+            valid_teeth = set(PERMANENT_UPPER + PERMANENT_LOWER + PRIMARY_TEETH_UPPER + PRIMARY_TEETH_LOWER)
+            valid_icds = {code.upper(): th for code, th, _ in ICD10}
+
+            # ดึงประวัติเดิมของผู้ป่วยเพื่อเช็กรายการซ้ำ
+            existing_keys = {
+                (
+                    str(e.get("timestamp", ""))[:10],
+                    str(e.get("tooth", "")).strip(),
+                    str(e.get("icd", "")).strip().upper(),
+                    str(e.get("procedure", "")).strip(),
+                )
+                for e in self.sel_entries
+            }
+
+            thai_months = ["", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
+            parsed_results: list[dict[str, str]] = []
+
+            for i, r in enumerate(raw_rows, start=2):
+                date_raw = r.get("วันที่รักษา") or r.get("date") or ""
+                tooth = r.get("ซี่ฟัน (FDI)") or r.get("ซี่ฟัน") or r.get("tooth") or ""
+                icd = (r.get("ICD-10") or r.get("icd") or "").upper()
+                procedure = r.get("การรักษา") or r.get("procedure") or ""
+                note = r.get("หมายเหตุ") or r.get("note") or ""
+                dentist_name = r.get("ทันตแพทย์") or r.get("dentist") or self.user_name
+
+                errors = []
+                iso_date = ""
+                date_th = date_raw
+
+                # ตรวจสอบรูปแบบวันที่ (รองรับ YYYY-MM-DD และ DD/MM/YYYY ทั้ง พ.ศ. และ ค.ศ.)
+                try:
+                    from datetime import datetime
+                    if "-" in date_raw and len(date_raw) >= 10:
+                        dt = datetime.strptime(date_raw[:10], "%Y-%m-%d")
+                    elif "/" in date_raw:
+                        parts = date_raw.split("/")
+                        d, m, y = int(parts[0]), int(parts[1]), int(parts[2])
+                        if y > 2400:
+                            y -= 543
+                        dt = datetime(y, m, d)
+                    else:
+                        raise ValueError("invalid date")
+                    iso_date = dt.strftime("%Y-%m-%d")
+                    date_th = f"{dt.day} {thai_months[dt.month]} {dt.year + 543}"
+                except Exception:
+                    errors.append("วันที่ไม่ถูกต้อง (ใช้ YYYY-MM-DD หรือ วว/ดด/ปปปป)")
+
+                if tooth not in valid_teeth:
+                    errors.append(f"เลขซี่ฟัน FDI '{tooth}' ไม่ถูกต้อง")
+
+                if icd not in valid_icds:
+                    errors.append(f"ไม่พบรหัส ICD-10 '{icd}'")
+
+                if not procedure:
+                    errors.append("ไม่ได้ระบุการรักษา")
+
+                if errors:
+                    status = "error"
+                    msg = " · ".join(errors)
+                elif (iso_date, tooth, icd, procedure) in existing_keys:
+                    status = "dup"
+                    msg = "มีประวัตินี้ในระบบแล้ว"
+                else:
+                    status = "ok"
+                    msg = ""
+                    existing_keys.add((iso_date, tooth, icd, procedure))
+
+                parsed_results.append(
+                    {
+                        "row": str(i),
+                        "date_iso": iso_date,
+                        "date_th": date_th,
+                        "tooth": tooth,
+                        "icd": icd,
+                        "procedure": procedure,
+                        "note": note,
+                        "dentist": dentist_name,
+                        "status": status,
+                        "message": msg,
+                    }
+                )
+
+            self.import_rows = parsed_results
+
+        except Exception as exc:
+            self.import_error = f"ไม่สามารถอ่านไฟล์ได้: {exc}"
 
     @rx.event
     def confirm_chart_import(self):
-        # TODO(backend): ตรวจว่า user_role เป็น "dentist" แล้วบันทึกแถว status "ok" ลงประวัติการรักษาของ
-        # self.selected_pid โดยใช้วันที่รักษาจากไฟล์ จากนั้นโหลด self.entries ใหม่และเรียก self.set_import_open(False)
-        return not_connected("นำเข้าไฟล์เข้าผังฟัน")
+        """บันทึกแถวสถานะ 'ok' ลงตาราง treatmententry ใน Neon Database"""
+        if self.user_role != "dentist":
+            return rx.toast.error("เฉพาะทันตแพทย์เท่านั้นที่สามารถยืนยันนำเข้าข้อมูลได้")
+
+        if not self.can_confirm_import:
+            return rx.toast.error("กรุณาตรวจสอบข้อมูลให้ถูกต้องและไม่มีรายการที่ต้องแก้ไข")
+
+        ok_rows = [r for r in self.import_rows if r["status"] == "ok"]
+        if not ok_rows:
+            return
+
+        try:
+            with rx.session() as session:
+                for r in ok_rows:
+                    ts = f"{r['date_iso']} 09:00" if r.get("date_iso") else ""
+                    new_entry = TreatmentEntry(
+                        patient_id=self.selected_pid,
+                        tooth=r["tooth"],
+                        icd=r["icd"],
+                        procedure=r["procedure"],
+                        note=r["note"],
+                        dentist=r["dentist"] or self.user_name,
+                        timestamp=ts,
+                    )
+                    session.add(new_entry)
+                session.commit()
+
+            count = len(ok_rows)
+            self.set_import_open(False)
+            self.load_treatment_entries()
+            return rx.toast.success(f"นำเข้าประวัติการรักษาเข้าผังฟันสำเร็จ {count} รายการ")
+        except Exception as exc:
+            return rx.toast.error(f"เกิดข้อผิดพลาดในการบันทึกข้อมูล: {exc}")
 
     @rx.event
     def select_my_tooth(self, tooth: str):

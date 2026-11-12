@@ -12,9 +12,28 @@ def day_button(d) -> rx.Component:
     selected = AppState.booking_date == d["iso"]
     closed = d["closed"] == "1"
     return rx.vstack(
-        rx.text(d["weekday"], size="1", color=rx.cond(selected, "white", "var(--slate-10)")),
-        rx.text(d["day"], size="5", weight="bold", color=rx.cond(selected, "white", "var(--slate-12)")),
-        rx.text(d["month"], size="1", color=rx.cond(selected, "white", "var(--slate-10)")),
+        rx.text(
+            d["weekday"],
+            size="1",
+            text_align="center",
+            width="100%",
+            color=rx.cond(selected, "white", "var(--slate-10)"),
+        ),
+        rx.text(
+            d["day"],
+            size="5",
+            weight="bold",
+            text_align="center",
+            width="100%",
+            color=rx.cond(selected, "white", "var(--slate-12)"),
+        ),
+        rx.text(
+            d["month"],
+            size="1",
+            text_align="center",
+            width="100%",
+            color=rx.cond(selected, "white", "var(--slate-10)"),
+        ),
         rx.text(
             rx.cond(
                 closed,
@@ -23,6 +42,9 @@ def day_button(d) -> rx.Component:
             ),
             size="1",
             weight="medium",
+            text_align="center",
+            width="100%",
+            line_height="1.2",
             color=rx.cond(
                 selected,
                 "white",
@@ -30,8 +52,10 @@ def day_button(d) -> rx.Component:
             ),
         ),
         align="center",
+        justify="center",
         spacing="0",
         padding_y="10px",
+        padding_x="4px",
         border_radius="14px",
         border=rx.cond(selected, "2px solid var(--purple-9)", "1px solid var(--slate-5)"),
         background_color=rx.cond(selected, "var(--purple-9)", rx.cond(closed, "var(--slate-3)", "white")),

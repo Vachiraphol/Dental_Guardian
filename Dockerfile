@@ -2,8 +2,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# 1. ติดตั้ง System Dependencies ที่จำเป็น
-RUN apt-get update && apt-get install -y \
+# 1. ติดตั้ง System Dependencies แบบ Non-interactive (ไม่ให้ขึ้นเตือน debconf สีแดง)
+RUN DEBIAN_FRONTEND=noninteractive apt-get update -qq && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
     curl \
     unzip \
     git \
@@ -17,8 +18,8 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # 3. ติดตั้ง Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --quiet --no-cache-dir --upgrade pip && \
+    pip install --quiet --no-cache-dir -r requirements.txt
 
 # 4. คัดลอกโปรเจกต์ทั้งหมด
 COPY . .

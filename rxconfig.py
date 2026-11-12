@@ -16,9 +16,16 @@ config = rx.Config(
     backend_host="0.0.0.0",
     api_url="https://dental-guardian.onrender.com",
     show_reflex_badge=False,
-    theme=rx.theme(
-        appearance="light",
-        accent_color="iris",
-        gray_color="slate",
-    ),
+    plugins=[
+        rx.plugins.SitemapPlugin(),
+        rx.plugins.RadixThemesPlugin(
+            theme=rx.theme(
+                appearance="light",
+                has_background=True,
+                accent_color="purple",
+                gray_color="slate",
+                radius="large",
+            )
+        ),
+    ],
 )

@@ -1,1 +1,0 @@
-import{W as e,q as t}from"./components-Blt2PyNA.js";import{K as n,X as r,Z as i,at as a,it as o,ln as s}from"./createLucideIcon-qFreI7Nw.js";var c=t(e()),l=t(a()),u={...o,...r,...i},d=c.forwardRef((e,t)=>{let{asChild:r,className:i,...a}=n(e,u),o=r?s:`strong`;return c.createElement(o,{...a,ref:t,className:(0,l.default)(`rt-Strong`,i)})});d.displayName=`Strong`;export{d as t};

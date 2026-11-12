@@ -40,8 +40,14 @@ def appt_card(a, upcoming: bool) -> rx.Component:
         rx.flex(
             rx.button(rx.icon(tag="ticket", size=14), "ใบนัด", size="1", variant="soft", on_click=AppState.show_slip(a["id"])),
             *([
-                rx.button(rx.icon(tag="calendar_plus", size=14), "ปฏิทิน", size="1", variant="soft", color_scheme="green",
-                          on_click=AppState.download_ics(a["id"])),
+                rx.button(
+                    rx.icon(tag="calendar_plus", size=14),
+                    "ปฏิทิน",
+                    size="1",
+                    variant="soft",
+                    color_scheme="green",
+                    on_click=AppState.download_ics(a["id"]),
+                ),
                 rx.alert_dialog.root(
                     rx.alert_dialog.trigger(rx.button("ยกเลิก", size="1", variant="soft", color_scheme="red")),
                     rx.alert_dialog.content(
@@ -72,8 +78,12 @@ def appt_card(a, upcoming: bool) -> rx.Component:
     )
 
 
-@rx.page(route="/my-appointments", title="ตารางนัดหมายของฉัน", on_load=AppState.load_schedule_data)
-def my_appointments():
+@rx.page(
+    route="/appointments",
+    title="นัดหมายของฉัน - Dental Guardian",
+    on_load=AppState.check_login,
+)
+def appointments() -> rx.Component:
     return member_page(
         "appointments",
         page_header(

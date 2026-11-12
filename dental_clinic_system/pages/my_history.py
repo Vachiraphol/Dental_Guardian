@@ -9,7 +9,11 @@ from dental_clinic_system.components.ui import card, card_title, empty_state, pa
 from dental_clinic_system.state import AppState
 
 
-@rx.page(route="/my-history", title="ประวัติการรักษา - Dental Guardian", on_load=AppState.load_schedule_data)
+@rx.page(
+    route="/my-history",
+    title="ประวัติการรักษา - Dental Guardian",
+    on_load=[AppState.check_login, AppState.load_schedule_data],
+)
 def my_history() -> rx.Component:
     return member_page(
         "history",
@@ -21,8 +25,10 @@ def my_history() -> rx.Component:
             rx.cond(
                 AppState.my_selected_tooth != "",
                 rx.vstack(
-                    card_title(AppState.my_selected_tooth_label,
-                               rx.button("ดูทั้งหมด", size="1", variant="ghost", on_click=AppState.select_my_tooth(""))),
+                    card_title(
+                        AppState.my_selected_tooth_label,
+                        rx.button("ดูทั้งหมด", size="1", variant="ghost", on_click=AppState.select_my_tooth("")),
+                    ),
                     rx.cond(
                         AppState.my_tooth_entries.length() > 0,
                         rx.vstack(rx.foreach(AppState.my_tooth_entries, lambda e: entry_item(e, False)), width="100%", spacing="2"),

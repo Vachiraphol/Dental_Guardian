@@ -15,8 +15,9 @@ config = rx.Config(
     db_url=database_url,
     backend_host="0.0.0.0",
     api_url="https://dental-guardian.onrender.com",
+    show_reflex_badge=False,
     theme=rx.theme(
-        appearance="light",     # บังคับโหมดสว่างเท่านั้น
+        appearance="light",
         accent_color="iris",
         gray_color="slate",
     ),

@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel, EmailStr
-from sqlmodel import Session, select
+import re
 from datetime import date
 from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel, EmailStr, field_validator
+from sqlmodel import Session, select
 
 from .database import get_session
 from .models import User, PatientProfile, UserRole, Gender
@@ -17,7 +18,6 @@ from .auth import (
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 
-# --- Schemas ---
 class RegisterPatientRequest(BaseModel):
     email: EmailStr
     password: str
@@ -26,10 +26,40 @@ class RegisterPatientRequest(BaseModel):
     id_card: str
     phone: str
     gender: Gender = Gender.OTHER
-    birth_date: Optional[date] = None
+    birth_date: date
     address: Optional[str] = None
     congenital_disease: Optional[str] = "ไม่มี"
     drug_allergy: Optional[str] = "ไม่มี"
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษตัวพิมพ์ใหญ่ (A-Z) อย่างน้อย 1 ตัว")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษตัวพิมพ์เล็ก (a-z) อย่างน้อย 1 ตัว")
+        if not re.search(r"\d", v):
+            raise ValueError("รหัสผ่านต้องมีตัวเลข (0-9) อย่างน้อย 1 ตัว")
+        return v
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        v_clean = v.strip().replace("-", "")
+        if not v_clean.startswith("0") or len(v_clean) != 10 or not v_clean.isdigit():
+            raise ValueError("เบอร์โทรศัพท์มือถือต้องขึ้นต้นด้วย 0 และมี 10 หลักเท่านั้น")
+        return v_clean
+
+    @field_validator("birth_date")
+    @classmethod
+    def validate_birth_date(cls, v: date) -> date:
+        current_year = date.today().year
+        birth_year = v.year - 543 if v.year > 2500 else v.year
+        if birth_year > current_year:
+            raise ValueError("ปีเกิดในปฏิทินห้ามเกินปีปัจจุบัน")
+        return v
 
 
 class TokenResponse(BaseModel):
@@ -52,18 +82,15 @@ class UserProfileResponse(BaseModel):
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def register_patient(payload: RegisterPatientRequest, session: Session = Depends(get_session)):
-    # 1. ตรวจสอบ Email ซ้ำ
     existing_user = session.exec(select(User).where(User.email == payload.email)).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="อีเมลนี้ถูกใช้งานในระบบแล้ว")
 
-    # 2. ตรวจสอบเลขบัตรประชาชนซ้ำ
     clean_id = payload.id_card.strip().replace("-", "")
     existing_id = session.exec(select(PatientProfile).where(PatientProfile.id_card == clean_id)).first()
     if existing_id:
         raise HTTPException(status_code=400, detail="หมายเลขบัตรประชาชนนี้มีข้อมูลในระบบแล้ว")
 
-    # 3. สร้าง User
     new_user = User(
         email=payload.email,
         hashed_password=get_password_hash(payload.password),
@@ -73,18 +100,16 @@ def register_patient(payload: RegisterPatientRequest, session: Session = Depends
     session.commit()
     session.refresh(new_user)
 
-    # 4. สร้าง Running Number HN (เช่น HN0001)
     hn_count = len(session.exec(select(PatientProfile)).all()) + 1
     new_hn = f"HN{hn_count:04d}"
 
-    # 5. สร้าง Patient Profile
     new_profile = PatientProfile(
         user_id=new_user.id,
         hn=new_hn,
         first_name=payload.first_name,
         last_name=payload.last_name,
         id_card=clean_id,
-        phone=payload.phone.strip().replace("-", ""),
+        phone=payload.phone,
         gender=payload.gender,
         birth_date=payload.birth_date,
         address=payload.address,

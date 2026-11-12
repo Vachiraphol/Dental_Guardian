@@ -165,7 +165,7 @@ def staff_page(active: str, *children: rx.Component) -> rx.Component:
     return rx.cond(
         # เงื่อนไข: ต้องล็อกอิน และมีบทบาทเป็น staff, dentist หรือ admin
         AppState.is_logged_in & ((AppState.user_role == "staff") | (AppState.user_role == "dentist") | (AppState.user_role == "admin")),
-        # ถ้าสิทธิ์ถูกต้อง แสดง Layout สำหรับเจ้าหน้าที่ตามปกติ
+        # ถ้าสิทธิ์ถูกต้อง แสดง Layout สำหรับเจ้าหน้าที่ในโทนสว่าง
         rx.flex(
             sidebar(active),
             mobile_topbar(active),
@@ -181,11 +181,11 @@ def staff_page(active: str, *children: rx.Component) -> rx.Component:
                 width="100%",
                 min_width="0",
                 min_height="100vh",
-                background_color="var(--slate-2)",
+                background_color="#F8FAFC",
                 overflow_x="hidden",
             ),
             width="100%",
-            background_color="var(--slate-2)",
+            background_color="#F8FAFC",
             flex_direction=["column", "column", "row"],
         ),
         # ถ้าไม่มีสิทธิ์ แสดงหน้าแจ้งเตือน Access Denied

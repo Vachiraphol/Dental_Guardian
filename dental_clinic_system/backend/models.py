@@ -1,13 +1,8 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from enum import Enum
 from typing import Optional, List
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel, Relationship
-
-
-# ฟังก์ชันช่วยดึงเวลาปัจจุบันแบบ UTC (สำหรับ api.py และ api_queue.py)
-def get_utc_now() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 class UserRole(str, Enum):
@@ -32,8 +27,8 @@ class User(SQLModel, table=True):
     hashed_password: str = Field(nullable=False)
     role: UserRole = Field(default=UserRole.PATIENT, nullable=False)
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=get_utc_now)
-    updated_at: datetime = Field(default_factory=get_utc_now)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
     profile: Optional["PatientProfile"] = Relationship(back_populates="user")
@@ -57,7 +52,7 @@ class PatientProfile(SQLModel, table=True):
     # ข้อมูลประวัติการแพทย์ (Medical History)
     congenital_disease: Optional[str] = Field(default="ไม่มี", description="โรคประจำตัว")
     drug_allergy: Optional[str] = Field(default="ไม่มี", description="ประวัติแพ้ยา")
-    created_at: datetime = Field(default_factory=get_utc_now)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
     user: Optional[User] = Relationship(back_populates="profile")
@@ -79,7 +74,7 @@ class PatientProfile(SQLModel, table=True):
         return v_clean
 
 
-# --- 3. Clinical & Booking Models ---
+# --- 3. Clinical & Booking Models (คงไว้ตามระบบเดิม) ---
 class QueueBooking(SQLModel, table=True):
     __tablename__ = "queue_bookings"
 
@@ -89,8 +84,8 @@ class QueueBooking(SQLModel, table=True):
     time_slot: str = Field(nullable=False)
     service_type: str = Field(nullable=False)
     dentist_id: Optional[int] = Field(default=None)
-    status: str = Field(default="confirmed")
-    created_at: datetime = Field(default_factory=get_utc_now)
+    status: str = Field(default="confirmed")  # pending, confirmed, cancelled, completed
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class Appointment(SQLModel, table=True):
@@ -103,7 +98,7 @@ class Appointment(SQLModel, table=True):
     treatment_type: str = Field(nullable=False)
     notes: Optional[str] = Field(default=None)
     status: str = Field(default="scheduled")
-    created_at: datetime = Field(default_factory=get_utc_now)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class TreatmentEntry(SQLModel, table=True):
@@ -117,4 +112,74 @@ class TreatmentEntry(SQLModel, table=True):
     icd10_name: str = Field(nullable=False)
     procedure_name: str = Field(nullable=False)
     note: Optional[str] = Field(default=None)
-    recorded_at: datetime = Field(default_factory=get_utc_now)
+    recorded_at: datetime = Field(default_factory=datetime.utcnow)
+
+# ========================================================
+# NEW AUTH & USER PROFILE MODELS (JWT Authentication)
+# ========================================================
+from enum import Enum
+from pydantic import field_validator
+from sqlmodel import Relationship
+
+
+class UserRole(str, Enum):
+    PATIENT = "patient"
+    DENTIST = "dentist"
+    STAFF = "staff"
+    ADMIN = "admin"
+
+
+class Gender(str, Enum):
+    MALE = "ชาย"
+    FEMALE = "หญิง"
+    OTHER = "ไม่ระบุ"
+
+
+class User(SQLModel, table=True):
+    __tablename__ = "users"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    email: str = Field(unique=True, index=True, nullable=False)
+    hashed_password: str = Field(nullable=False)
+    role: UserRole = Field(default=UserRole.PATIENT, nullable=False)
+    is_active: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=get_utc_now)
+    updated_at: datetime = Field(default_factory=get_utc_now)
+
+    profile: Optional["PatientProfile"] = Relationship(back_populates="user")
+
+
+class PatientProfile(SQLModel, table=True):
+    __tablename__ = "patient_profiles"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: Optional[int] = Field(default=None, foreign_key="users.id", index=True)
+    hn: str = Field(unique=True, index=True, description="Hospital / Patient Number e.g. HN0001")
+    first_name: str = Field(nullable=False)
+    last_name: str = Field(nullable=False)
+    id_card: str = Field(unique=True, index=True, max_length=13, nullable=False)
+    phone: str = Field(index=True, max_length=10, nullable=False)
+    gender: Gender = Field(default=Gender.OTHER)
+    birth_date: Optional[date] = Field(default=None)
+    address: Optional[str] = Field(default=None)
+    congenital_disease: Optional[str] = Field(default="ไม่มี")
+    drug_allergy: Optional[str] = Field(default="ไม่มี")
+    created_at: datetime = Field(default_factory=get_utc_now)
+
+    user: Optional[User] = Relationship(back_populates="profile")
+
+    @field_validator("id_card")
+    @classmethod
+    def validate_id_card(cls, v: str) -> str:
+        v_clean = v.strip().replace("-", "")
+        if len(v_clean) != 13 or not v_clean.isdigit():
+            raise ValueError("หมายเลขบัตรประชาชนต้องเป็นตัวเลข 13 หลักเท่านั้น")
+        return v_clean
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        v_clean = v.strip().replace("-", "")
+        if len(v_clean) != 10 or not v_clean.isdigit():
+            raise ValueError("เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลักเท่านั้น")
+        return v_clean

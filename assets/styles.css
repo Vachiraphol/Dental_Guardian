@@ -275,3 +275,56 @@ button[role="checkbox"] svg {
     color: #FFFFFF !important;
     stroke: #FFFFFF !important;
 }
+
+/* ========================================================
+   6. UNIFIED PURPLE BUTTON SYSTEM (MATCHING REGISTER BUTTON)
+   ======================================================== */
+/* 1. ปุ่มทึบ (Solid) เช่น สมัครสมาชิก, นัดหมายล่วงหน้า -> พื้นหลังม่วงเข้ม ตัวหนังสือขาว */
+.rt-Button[data-variant="solid"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]),
+.rt-Button[data-accent-color="purple"][data-variant="solid"] {
+    background-color: #8E4EC6 !important;
+    color: #FFFFFF !important;
+    font-weight: 500 !important;
+    box-shadow: 0 4px 12px rgba(142, 78, 198, 0.25) !important;
+    transition: all 0.2s ease !important;
+}
+
+.rt-Button[data-variant="solid"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]) *,
+.rt-Button[data-accent-color="purple"][data-variant="solid"] * {
+    color: #FFFFFF !important;
+}
+
+.rt-Button[data-variant="solid"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]):hover,
+.rt-Button[data-accent-color="purple"][data-variant="solid"]:hover {
+    background-color: #793AAF !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(142, 78, 198, 0.35) !important;
+}
+
+/* 2. ปุ่มอ่อน (Soft) เช่น เข้าสู่ระบบ, บริการของเรา -> พื้นหลังม่วงอ่อน ตัวหนังสือม่วงเข้มชัด */
+.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]),
+.rt-Button[data-accent-color="purple"][data-variant="soft"] {
+    background-color: #F4EAFC !important;
+    color: #653294 !important;
+    border: 1px solid #E4CEF7 !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+}
+
+.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]) *,
+.rt-Button[data-accent-color="purple"][data-variant="soft"] * {
+    color: #653294 !important;
+}
+
+.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]):hover,
+.rt-Button[data-accent-color="purple"][data-variant="soft"]:hover {
+    background-color: #EBD8FA !important;
+    color: #4E2277 !important;
+}
+
+/* 3. ปุ่มกรอบ (Outline) -> ขอบม่วง ตัวหนังสือม่วงเข้ม */
+.rt-Button[data-variant="outline"][data-accent-color="purple"] {
+    background-color: #FFFFFF !important;
+    color: #653294 !important;
+    border: 1.5px solid #8E4EC6 !important;
+}

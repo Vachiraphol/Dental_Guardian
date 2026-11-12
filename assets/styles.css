@@ -557,7 +557,7 @@ form button[type="submit"].rt-Button {
 }
 
 /* ========================================================
-   8. CENTER AUTH CARD, DOB SELECTS & ONLY BOOKING BUTTONS
+   8. CENTER AUTH CARD, DOB SELECTS & ONLY BOOKING CELLS
    ======================================================== */
 .dg-dob-select {
     width: 100% !important;
@@ -604,9 +604,10 @@ main .rt-Card > .rt-VStack {
     }
 }
 
-/* เจาะจงเฉพาะปุ่มเลือกวันและปุ่มเลือกเวลา (button) ใน Grid เท่านั้น ไม่กระทบฟอร์มและ Footer */
+/* เจาะจงเฉพาะปุ่มเลือกวัน (rx.box ที่ไม่มี input/select) และปุ่มเลือกเวลา (button) ใน Grid */
 main .rt-Grid button[type="button"],
-main .rt-Grid button:not([type="submit"]):not(.rt-SelectTrigger) {
+main .rt-Grid button:not([type="submit"]):not(.rt-SelectTrigger),
+main .rt-Grid > div:not(:has(input)):not(:has(select)):not(:has(textarea)):not(:has(.rt-SelectTrigger)) {
     height: auto !important;
     min-height: 58px !important;
     padding: 8px 4px !important;
@@ -620,10 +621,12 @@ main .rt-Grid button:not([type="submit"]):not(.rt-SelectTrigger) {
 }
 
 main .rt-Grid button[type="button"] *,
-main .rt-Grid button:not([type="submit"]):not(.rt-SelectTrigger) * {
+main .rt-Grid button:not([type="submit"]):not(.rt-SelectTrigger) *,
+main .rt-Grid > div:not(:has(input)):not(:has(select)):not(:has(textarea)):not(:has(.rt-SelectTrigger)) * {
     width: 100% !important;
     text-align: center !important;
     justify-content: center !important;
+    align-items: center !important;
     margin-left: auto !important;
     margin-right: auto !important;
     line-height: 1.25 !important;

@@ -20,10 +20,10 @@ RUN python -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 ENV REFLEX_CHECK_LATEST_VERSION=false
 
-# 3. ติดตั้ง Python dependencies
+# 3. ติดตั้ง Python dependencies และ uvicorn สำหรับรัน ASGI บน Render
 COPY requirements.txt .
 RUN pip install --quiet --no-cache-dir --upgrade pip && \
-    pip install --quiet --no-cache-dir -r requirements.txt
+    pip install --quiet --no-cache-dir -r requirements.txt uvicorn
 
 # 4. คัดลอกโปรเจกต์ทั้งหมด
 COPY . .
@@ -36,5 +36,5 @@ RUN reflex export --no-zip
 ENV PORT=10000
 EXPOSE ${PORT}
 
-# 6. รัน Backend FastAPI/Uvicorn โดยตรงบน 0.0.0.0:$PORT เพื่อให้ Render จับพอร์ตได้ทันที
-CMD ["sh", "-c", "uvicorn dental_clinic_system.dental_clinic_system:app --host 0.0.0.0 --port ${PORT:-10000}"]
+# 6. รัน Backend ผ่าน python -m uvicorn บน 0.0.0.0:$PORT เพื่อให้ Render จับพอร์ตได้ทันที
+CMD ["sh", "-c", "python -m uvicorn dental_clinic_system.dental_clinic_system:app --host 0.0.0.0 --port ${PORT:-10000}"]

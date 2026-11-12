@@ -411,6 +411,13 @@ form {
     max-width: 100% !important;
 }
 
+/* บังคับให้ปุ่ม Submit ในฟอร์ม (เข้าสู่ระบบ / สร้างบัญชีผู้ใช้) กางเต็มความกว้างเสมอ */
+form button[type="submit"].rt-Button {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+}
+
 /* ควบคุมการสลับเมนู: จอ >= 1200px แสดงแคปซูลเมนู, จอ < 1200px (iPad & มือถือ) แสดงปุ่ม 3 ขีด */
 @media (min-width: 1200px) {
     .dg-desktop-nav {
@@ -436,15 +443,23 @@ form {
 
 /* หน้าจอ iPad / แท็บเล็ต (641px - 1199px) */
 @media (min-width: 641px) and (max-width: 1199px) {
+    /* ขยายโลโก้และชื่อแบรนด์ตรง Header บน iPad ให้ใหญ่ขึ้นสมส่วน */
     .dg-header img {
-        height: 44px !important;
+        height: 54px !important;
         width: auto !important;
     }
     .dg-header .dg-brand-link .rt-Text:first-of-type {
-        font-size: 18px !important;
+        font-size: 21px !important;
+        line-height: 1.15 !important;
     }
     .dg-header .dg-brand-link .rt-Text:last-of-type {
-        font-size: 12px !important;
+        font-size: 13px !important;
+    }
+    /* จัดสัดส่วนการ์ดหน้าเข้าสู่ระบบ/สมัครสมาชิกบน iPad ให้กึ่งกลางสวยงาม ไม่กางล้นเต็มจอ */
+    main .rt-Card {
+        max-width: 600px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
     }
     /* ปรับขนาดปุ่ม Hero ("นัดหมายล่วงหน้า" / "บริการของเรา") ไม่ให้ใหญ่เกินและไม่ทับรูป */
     .gradient-bg-animated button.rt-Button[size="4"],
@@ -460,26 +475,26 @@ form {
 
 /* หน้าจอมือถือ (Mobile: <= 640px) */
 @media (max-width: 640px) {
-    /* ย่อขนาดโลโก้และข้อความคลินิกให้พอดีกับปุ่ม "เข้าสู่ระบบ" + "สมัครสมาชิก" + ปุ่ม 3 ขีด */
+    /* ขยายโลโก้และชื่อแบรนด์ตรง Header บนมือถือให้ใหญ่ขึ้นชัดเจน */
     .dg-header img {
-        height: 28px !important;
-        width: 28px !important;
-        min-width: 28px !important;
+        height: 36px !important;
+        width: 36px !important;
+        min-width: 36px !important;
         object-fit: contain !important;
     }
     .dg-header .dg-brand-link .rt-Flex,
     .dg-header .dg-brand-link .rt-HStack {
-        gap: 4px !important;
+        gap: 6px !important;
     }
     .dg-header .dg-brand-link .rt-Text:first-of-type {
-        font-size: 12px !important;
-        line-height: 1.1 !important;
+        font-size: 14px !important;
+        line-height: 1.15 !important;
     }
     .dg-header .dg-brand-link .rt-Text:last-of-type {
-        font-size: 9px !important;
+        font-size: 10px !important;
         line-height: 1.1 !important;
     }
-    /* ปรับปุ่ม "เข้าสู่ระบบ" และ "สมัครสมาชิก" ด้านบนบนมือถือให้กะทัดรัด ไม่เบียดกัน */
+    /* ปุ่ม "เข้าสู่ระบบ" และ "สมัครสมาชิก" ด้านบนบนมือถือ */
     .dg-header .dg-auth-buttons {
         gap: 4px !important;
     }
@@ -489,7 +504,7 @@ form {
         height: 28px !important;
         white-space: nowrap !important;
     }
-    /* ปรับขนาดปุ่ม Hero ("นัดหมายล่วงหน้า" และ "บริการของเรา") ไม่ให้ใหญ่ล้นและไม่ทับรูปภาพด้านล่าง */
+    /* ปรับขนาดปุ่ม Hero ("นัดหมายล่วงหน้า" และ "บริการของเรา") ไม่ให้ทับรูปภาพด้านล่าง */
     .gradient-bg-animated button.rt-Button[size="4"],
     .gradient-bg-animated a button.rt-Button {
         height: 40px !important;

@@ -27,6 +27,25 @@ def register() -> rx.Component:
 
     grid = lambda *c: rx.grid(*c, columns={"initial": "1", "sm": "2"}, spacing="3", width="100%")
     return public_page(
+        # สคริปต์ล็อกวันที่สูงสุดในปฏิทินวันเกิดให้เป็นวัน/เดือน/ปีปัจจุบันของเครื่องผู้ใช้เสมอ
+        rx.script(
+            """
+            (function() {
+                const lockDob = () => {
+                    const dobInput = document.querySelector('input[name="dob"]');
+                    if (dobInput) {
+                        const now = new Date();
+                        const yyyy = now.getFullYear();
+                        const mm = String(now.getMonth() + 1).padStart(2, '0');
+                        const dd = String(now.getDate()).padStart(2, '0');
+                        dobInput.max = `${yyyy}-${mm}-${dd}`;
+                    }
+                };
+                lockDob();
+                setTimeout(lockDob, 500);
+            })();
+            """
+        ),
         auth_card(
             "user_plus",
             "สมัครสมาชิก",
@@ -48,19 +67,23 @@ def register() -> rx.Component:
                                 required=True,
                             ),
                             True,
-                            "รูปแบบ วัน/เดือน/ปี และต้องไม่เกินปีปัจจุบัน",
+                            "รูปแบบ วัน/เดือน/ปี และต้องไม่เกินวัน/เดือน/ปีปัจจุบัน",
                         ),
                         field(
-                            "เลขบัตรประชาชน",
+                            "เลขบัตรประชาชน / Passport",
                             rx.input(
                                 name="national_id",
                                 size="3",
                                 max_length=13,
-                                min_length=13,
-                                pattern="[0-9]{13}",
-                                placeholder="ตัวเลข 13 หลัก",
+                                min_length=6,
+                                pattern="([0-9]{13}|[A-Za-z0-9]{6,12})",
+                                placeholder="เลข 13 หลัก หรือ Passport ต่างชาติ",
+                                title="กรอกเลขบัตรประชาชน 13 หลัก หรือเลขที่ Passport 6-12 ตัวอักษร",
                                 autocomplete="off",
+                                required=True,
                             ),
+                            True,
+                            "คนไทยกรอกเลข 13 หลัก / ต่างชาติกรอกเลข Passport",
                         ),
                         field(
                             "เบอร์โทรศัพท์",

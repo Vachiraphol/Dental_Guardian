@@ -79,11 +79,12 @@ def appt_card(a, upcoming: bool) -> rx.Component:
 
 
 @rx.page(
-    route="/appointments",
+    route="/my-appointments",
     title="นัดหมายของฉัน - Dental Guardian",
     on_load=AppState.check_login,
 )
-def appointments() -> rx.Component:
+
+def my_appointments() -> rx.Component:
     return member_page(
         "appointments",
         page_header(

@@ -223,19 +223,27 @@ def entry_form() -> rx.Component:
     )
 
 
-@rx.page(route="/records", title="บันทึกการรักษาและผังฟัน - Dental Guardian")
+@rx.page(
+    route="/records",
+    title="บันทึกการรักษาและผังฟัน - Dental Guardian",
+    on_load=[AppState.check_clinical_access, AppState.load_patients_data, AppState.load_treatment_entries],
+)
 def records() -> rx.Component:
     return staff_page(
         "records",
         page_header(
             "บันทึกการรักษาและผังฟัน",
             "คลิกซี่ฟันบนผัง หรือเลือก/พิมพ์เลขซี่ฟัน แล้วบันทึกการวินิจฉัยและการรักษา",
-            rx.button(
-                rx.icon(tag="file_text", size=14),
-                "ดูเวชระเบียนรวม",
-                variant="soft",
-                color_scheme="purple",
-                on_click=AppState.open_patient_record(AppState.selected_pid, "/records/summary"),
+            rx.cond(
+                AppState.user_role != "dentist",
+                rx.button(
+                    rx.icon(tag="file_text", size=14),
+                    "ดูเวชระเบียนรวม",
+                    variant="soft",
+                    color_scheme="purple",
+                    on_click=AppState.open_patient_record(AppState.selected_pid, "/records/summary"),
+                ),
+                rx.fragment(),
             ),
         ),
         patient_picker(),

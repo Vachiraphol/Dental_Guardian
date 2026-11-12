@@ -17,10 +17,19 @@ MENU = [
     ]),
 ]
 
+# เมนูเฉพาะทันตแพทย์
+DENTIST_MENU = [
+    ("ประวัติการรักษา", [
+        ("records", "บันทึกการรักษาและผังฟัน", "clipboard_pen", "/records"),
+    ]),
+    ("ตารางปฏิบัติงาน", [
+        ("schedule", "ตารางเวลาปฏิบัติงานทันตแพทย์", "calendar_cog", "/schedule"),
+    ]),
+]
+
 
 def sidebar_item(key: str, text: str, icon: str, url: str, active: str) -> rx.Component:
     is_active = key == active
-    # สำหรับเมนู schedule ให้เปลี่ยนข้อความตามสิทธิ์: แพทย์ = ตารางเวลาปฏิบัติงานทันตแพทย์ / สตาฟ = ตั้งค่าตารางเวลาทันตแพทย์
     display_text = (
         rx.cond(
             AppState.user_role == "dentist",
@@ -61,11 +70,15 @@ def sidebar_item(key: str, text: str, icon: str, url: str, active: str) -> rx.Co
     )
 
 
-def sidebar(active: str = "") -> rx.Component:
+def _build_sections(menu_list, active: str):
     sections = []
-    for title, items in MENU:
+    for title, items in menu_list:
         sections.append(rx.text(title, size="1", weight="bold", color="var(--slate-9)", padding_x="14px", padding_top="12px"))
         sections.extend(sidebar_item(*item, active) for item in items)
+    return sections
+
+
+def sidebar(active: str = "") -> rx.Component:
     return rx.box(
         rx.vstack(
             rx.link(
@@ -74,14 +87,14 @@ def sidebar(active: str = "") -> rx.Component:
                         src="/logo.png",
                         alt="Dental Guardian Dental Clinic",
                         width="auto",
-                        height="58px",  # ปรับโลโก้ให้สูงเด่น 58px
+                        height="58px",
                         object_fit="contain",
                         flex_shrink="0",
                     ),
                     rx.vstack(
                         rx.text(
                             "Dental Guardian",
-                            size="5",  # ขยายชื่อแบรนด์ให้ใหญ่ขึ้น
+                            size="5",
                             weight="bold",
                             font_weight="900",
                             color="#1e3f4b",
@@ -91,7 +104,7 @@ def sidebar(active: str = "") -> rx.Component:
                         ),
                         rx.text(
                             "สำหรับหมอฟันและพยาบาล",
-                            size="3",  # ขยายคำบรรยายด้านล่างให้ใหญ่ขึ้น
+                            size="3",
                             weight="bold",
                             color="var(--slate-10)",
                             white_space="nowrap",
@@ -111,7 +124,11 @@ def sidebar(active: str = "") -> rx.Component:
                 border_bottom="1px solid var(--slate-4)",
                 width="100%",
             ),
-            *sections,
+            rx.cond(
+                AppState.user_role == "dentist",
+                rx.vstack(*_build_sections(DENTIST_MENU, active), width="100%", spacing="1"),
+                rx.vstack(*_build_sections(MENU, active), width="100%", spacing="1"),
+            ),
             rx.spacer(),
             rx.vstack(
                 rx.hstack(
@@ -161,10 +178,9 @@ def sidebar(active: str = "") -> rx.Component:
     )
 
 
-def mobile_topbar(active: str = "") -> rx.Component:
-    """Compact staff navigation for phones: logo + current page + dropdown menu."""
+def _build_mobile_items(menu_list, active: str):
     menu_items = []
-    for title, items in MENU:
+    for title, items in menu_list:
         menu_items.append(rx.text(title, size="1", weight="bold", color="var(--slate-9)", padding_x="8px", padding_y="4px"))
         for key, text, icon, url in items:
             item_label = (
@@ -187,7 +203,11 @@ def mobile_topbar(active: str = "") -> rx.Component:
                 )
             )
         menu_items.append(rx.menu.separator())
+    return menu_items
 
+
+def mobile_topbar(active: str = "") -> rx.Component:
+    """Compact staff navigation for phones: logo + current page + dropdown menu."""
     current_title = (
         rx.cond(
             AppState.user_role == "dentist",
@@ -217,7 +237,11 @@ def mobile_topbar(active: str = "") -> rx.Component:
                 ),
             ),
             rx.menu.content(
-                *menu_items,
+                rx.cond(
+                    AppState.user_role == "dentist",
+                    rx.fragment(*_build_mobile_items(DENTIST_MENU, active)),
+                    rx.fragment(*_build_mobile_items(MENU, active)),
+                ),
                 rx.menu.item(rx.icon(tag="log_out", size=14), "ออกจากระบบ (" + AppState.user_name + ")", color="red", on_click=AppState.logout),
                 align="end",
             ),

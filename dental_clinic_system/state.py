@@ -241,10 +241,23 @@ class AppState(rx.State):
 
     @rx.event
     def check_staff_access(self):
-        """ตรวจสอบสิทธิ์: ถ้าไม่ใช่เจ้าหน้าที่/หมอ ให้เด้งกลับหน้าโปรไฟล์"""
+        """ตรวจสอบสิทธิ์เฉพาะเจ้าหน้าที่เคาน์เตอร์/แอดมิน (หมอจะถูกส่งไปหน้าบันทึกการรักษา)"""
         if not self.is_logged_in:
             return rx.redirect("/login")
-        if self.user_role not in ("staff", "dentist", "admin"):
+        if self.user_role == "dentist":
+            return rx.redirect("/records")
+        if self.user_role not in ("staff", "admin"):
+            return [
+                rx.toast.error("คุณไม่มีสิทธิ์เข้าถึงหน้านี้"),
+                rx.redirect("/profile"),
+            ]
+
+    @rx.event
+    def check_clinical_access(self):
+        """ตรวจสอบสิทธิ์บุคลากรคลินิก (ทันตแพทย์ / เจ้าหน้าที่ / แอดมิน)"""
+        if not self.is_logged_in:
+            return rx.redirect("/login")
+        if self.user_role not in ("dentist", "staff", "admin"):
             return [
                 rx.toast.error("คุณไม่มีสิทธิ์เข้าถึงหน้านี้"),
                 rx.redirect("/profile"),
@@ -1082,12 +1095,15 @@ class AppState(rx.State):
                         "registered": patient.created_at.isoformat() if patient.created_at else "",
                     })]
 
+            
             self.load_patients_data()
             self.load_schedule_data()
             self.load_treatment_entries()
 
-            # นำทางตาม Role (หากผู้ป่วยไม่มีหน้า /profile ให้เปลี่ยนเป็น / หรือ /my-appointments)
-            if user.role in ("staff", "dentist", "admin"):
+            # นำทางตาม Role
+            if user.role == "dentist":
+                return rx.redirect("/records")
+            if user.role in ("staff", "admin"):
                 return rx.redirect("/dashboard")
             return rx.redirect("/profile")
 
@@ -1608,9 +1624,13 @@ class AppState(rx.State):
                 })
 
             self.dentists = loaded_dentists
-            if not self.schedule_dentist_id and self.dentists:
+            if self.user_role == "dentist":
+                matched_doc = next((d for d in self.dentists if d["name"] == self.user_name), None)
+                if matched_doc:
+                    self.schedule_dentist_id = matched_doc["id"]
+            elif not self.schedule_dentist_id and self.dentists:
                 self.schedule_dentist_id = self.dentists[0]["id"]
-
+                
             # 2. โหลด QueueBooking และ Appointment
             bookings = session.exec(select(QueueBooking)).all()
             appts = session.exec(select(Appointment)).all()

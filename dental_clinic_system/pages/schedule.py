@@ -146,7 +146,7 @@ def monthly_calendar_view() -> rx.Component:
 @rx.page(
     route="/schedule",
     title="ตารางเวลาปฏิบัติงานทันตแพทย์ - Dental Guardian",
-    on_load=[AppState.check_staff_access, AppState.load_schedule_data],
+    on_load=[AppState.check_clinical_access, AppState.load_schedule_data],
 )
 def schedule() -> rx.Component:
     d = AppState.schedule_dentist

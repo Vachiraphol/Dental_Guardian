@@ -557,8 +557,27 @@ form button[type="submit"].rt-Button {
 }
 
 /* ========================================================
-   8. CENTER AUTH CARD & FIX BOOKING SLOTS / STEPPER
+   8. CENTER AUTH CARD, DOB SELECTS & BOOKING GRID LABELS
    ======================================================== */
+/* สไตล์ช่องเลือก วัน / เดือน / ปี พ.ศ. ให้กลมกลืนกับ Input ของระบบ */
+.dg-dob-select {
+    width: 100% !important;
+    height: 40px !important;
+    padding: 0 8px !important;
+    border-radius: 8px !important;
+    border: 1px solid #CBD5E1 !important;
+    background-color: #FFFFFF !important;
+    color: #1E293B !important;
+    font-family: 'Kanit', sans-serif !important;
+    font-size: 14px !important;
+    outline: none !important;
+    cursor: pointer !important;
+}
+
+.dg-dob-select:focus {
+    border-color: #8E4EC6 !important;
+}
+
 main .rt-Card,
 main .rt-Card > .rt-Flex,
 main .rt-Card > .rt-VStack {
@@ -591,11 +610,11 @@ main .rt-Card > .rt-VStack {
     }
 }
 
-/* จัดให้ข้อความในช่องเลือกวัน & ช่องเลือกช่วงเวลา ("ว่าง 2 คิว" / "นอกเวลาทำการ") อยู่กึ่งกลางทุกบรรทัด */
-main .rt-Card .rt-Grid button,
-main .rt-Card .rt-Grid [role="button"],
-main .rt-Card .rt-Grid > div,
-main .rt-Card .rt-Grid > div > div {
+/* บังคับให้ทุกช่องใน Grid หน้าจองคิว ("นอกเวลาทำการ" / "ว่าง 2 คิว") อยู่กึ่งกลาง 100% ไม่ว่าจะอยู่ใน .rt-Card หรือ .rt-Box */
+main .rt-Grid button,
+main .rt-Grid [role="button"],
+main .rt-Grid > div,
+main .rt-Grid > div > div {
     height: auto !important;
     min-height: 58px !important;
     padding: 8px 4px !important;
@@ -609,12 +628,12 @@ main .rt-Card .rt-Grid > div > div {
     overflow: visible !important;
 }
 
-main .rt-Card .rt-Grid button *,
-main .rt-Card .rt-Grid [role="button"] *,
-main .rt-Card .rt-Grid > div *,
-main .rt-Card .rt-Grid .rt-Text,
-main .rt-Card .rt-Grid span,
-main .rt-Card .rt-Grid p {
+main .rt-Grid button *,
+main .rt-Grid [role="button"] *,
+main .rt-Grid > div *,
+main .rt-Grid .rt-Text,
+main .rt-Grid span,
+main .rt-Grid p {
     width: 100% !important;
     text-align: center !important;
     justify-content: center !important;
@@ -630,4 +649,37 @@ main .rt-Flex [style*="border-radius: 9999px"],
 main .rt-HStack [style*="border-radius: 9999px"],
 main .rt-Box[style*="border-radius: 999"] {
     flex-shrink: 0 !important;
+}
+
+/* ========================================================
+   9. FORCE CENTER "นอกเวลาทำการ" ON MOBILE BOOKING BUTTONS
+   ======================================================== */
+@media (max-width: 640px) {
+    /* บังคับให้ปุ่มวันที่และปุ่มช่วงเวลาทุกปุ่มในหน้าจองคิวจัดกึ่งกลางทั้งกล่อง */
+    .rt-Grid button,
+    .rt-Grid [role="button"],
+    .rt-Grid > div {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        padding-left: 2px !important;
+        padding-right: 2px !important;
+    }
+
+    /* บังคับให้ตัวอักษรทุกบรรทัด ("นอกเวลาทำการ", "ว่าง 2 คิว", วันที่) กว้างเต็มช่องและจัดกึ่งกลาง */
+    .rt-Grid button > *,
+    .rt-Grid [role="button"] > *,
+    .rt-Grid > div > *,
+    .rt-Grid .rt-Text {
+        width: 100% !important;
+        max-width: 100% !important;
+        text-align: center !important;
+        align-self: center !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
 }

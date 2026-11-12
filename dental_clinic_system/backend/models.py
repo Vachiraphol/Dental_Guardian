@@ -117,9 +117,14 @@ class TreatmentEntry(SQLModel, table=True):
 # ========================================================
 # NEW AUTH & USER PROFILE MODELS (JWT Authentication)
 # ========================================================
+from datetime import date, datetime, timezone
 from enum import Enum
 from pydantic import field_validator
 from sqlmodel import Relationship
+
+
+def get_utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class UserRole(str, Enum):

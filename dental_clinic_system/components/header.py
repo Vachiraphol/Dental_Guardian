@@ -11,7 +11,7 @@ PUBLIC_LINKS = [
 ]
 
 
-def nav_link(text: str, href: str, icon: str = "", text_size: str = "3", icon_size: int = 18) -> rx.Component:
+def nav_link(text: str, href, icon: str = "", text_size: str = "3", icon_size: int = 18) -> rx.Component:
     return rx.link(
         rx.hstack(
             *([rx.icon(tag=icon, size=icon_size)] if icon else []),
@@ -195,7 +195,16 @@ def mobile_menu() -> rx.Component:
             rx.icon_button(rx.icon(tag="menu"), variant="ghost", color_scheme="gray", size="3"),
         ),
         rx.menu.content(
-            *[rx.menu.item(text, on_click=rx.redirect(href)) for text, href in PUBLIC_LINKS],
+            rx.menu.item("หน้าแรก", on_click=rx.redirect("/")),
+            rx.menu.item("จองคิว", on_click=rx.redirect("/booking")),
+            rx.menu.item(
+                "นัดหมายของฉัน",
+                on_click=rx.redirect(rx.cond(AppState.is_logged_in, "/my-appointments", "/login")),
+            ),
+            rx.menu.item(
+                "ประวัติการรักษา",
+                on_click=rx.redirect(rx.cond(AppState.is_logged_in, "/my-history", "/login")),
+            ),
             rx.cond(
                 is_dentist,
                 rx.fragment(
@@ -238,6 +247,7 @@ def mobile_menu() -> rx.Component:
         ),
     )
 
+
 def header() -> rx.Component:
     return rx.box(
         rx.hstack(
@@ -247,7 +257,16 @@ def header() -> rx.Component:
             # 2. ตรงกลาง: แคปซูลเมนูนำทางหลัก จัดกึ่งกลางหน้าจออย่างสมดุล
             rx.box(
                 rx.hstack(
-                    *[nav_link(text, href) for text, href in PUBLIC_LINKS],
+                    nav_link("หน้าแรก", "/"),
+                    nav_link("จองคิว", "/booking"),
+                    nav_link(
+                        "นัดหมายของฉัน",
+                        rx.cond(AppState.is_logged_in, "/my-appointments", "/login"),
+                    ),
+                    nav_link(
+                        "ประวัติการรักษา",
+                        rx.cond(AppState.is_logged_in, "/my-history", "/login"),
+                    ),
                     align="center",
                     spacing="1",
                     padding="6px 8px",

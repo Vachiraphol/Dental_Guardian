@@ -146,17 +146,21 @@ def member_tabs(active: str) -> rx.Component:
 
 
 def member_page(active: str, *children: rx.Component) -> rx.Component:
-    """Customer account pages (SRS 5.2–5.4): side menu + content."""
-    return public_page(
-        rx.flex(
-            rx.box(member_menu(active), width="260px", flex_shrink="0", display=["none", "none", "block"]),
-            member_tabs(active),
-            rx.vstack(*children, width="100%", spacing="4", min_width="0"),
-            flex_direction=["column", "column", "row"],
-            gap="24px",
-            align="start",
-            width="100%",
+    """Customer account pages (SRS 5.2–5.4): side menu + content (ป้องกันการกระพริบก่อนล็อกอิน)."""
+    return rx.cond(
+        AppState.is_logged_in,
+        public_page(
+            rx.flex(
+                rx.box(member_menu(active), width="260px", flex_shrink="0", display=["none", "none", "block"]),
+                member_tabs(active),
+                rx.vstack(*children, width="100%", spacing="4", min_width="0"),
+                flex_direction=["column", "column", "row"],
+                gap="24px",
+                align="start",
+                width="100%",
+            ),
         ),
+        rx.box(background_color="#FAFAFA", min_height="100vh", width="100%"),
     )
 
 

@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# 1. ติดตั้ง System Dependencies แบบ Non-interactive (ไม่ให้ขึ้นเตือน debconf สีแดง)
+# 1. ติดตั้ง System Dependencies แบบ Non-interactive
 RUN DEBIAN_FRONTEND=noninteractive apt-get update -qq && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
     curl \
@@ -11,10 +11,14 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update -qq && \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. ตั้งค่า Virtual Environment
+# ปิด Error ของ lscpu ใน Docker Build ของ Render
+RUN printf '#!/bin/sh\necho "CPU(s): 1"\n' > /usr/local/bin/lscpu && chmod +x /usr/local/bin/lscpu
+
+# 2. ตั้งค่า Virtual Environment และปิดแจ้งเตือนอัปเดตเวอร์ชันของ Reflex
 ENV VIRTUAL_ENV=/opt/venv
 RUN python -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+ENV REFLEX_CHECK_LATEST_VERSION=false
 
 # 3. ติดตั้ง Python dependencies
 COPY requirements.txt .

@@ -11,7 +11,27 @@ from dental_clinic_system.state import AppState, GENDERS
 
 @rx.page(route="/register", title="สมัครสมาชิก - Dental Guardian")
 def register() -> rx.Component:
-    today_iso = date.today().strftime("%Y-%m-%d")
+    today = date.today()
+    current_ad_year = today.year
+    current_be_year = current_ad_year + 543
+
+    days = [f"{d:02d}" for d in range(1, 32)]
+    months = [
+        ("01", "มกราคม"),
+        ("02", "กุมภาพันธ์"),
+        ("03", "มีนาคม"),
+        ("04", "เมษายน"),
+        ("05", "พฤษภาคม"),
+        ("06", "มิถุนายน"),
+        ("07", "กรกฎาคม"),
+        ("08", "สิงหาคม"),
+        ("09", "กันยายน"),
+        ("10", "ตุลาคม"),
+        ("11", "พฤศจิกายน"),
+        ("12", "ธันวาคม"),
+    ]
+    # ปี พ.ศ. เริ่มจากปีปัจจุบันย้อนหลังไป 120 ปี (ไม่มีปีอนาคตให้เลือกบน iPad/iOS เด็ดขาด)
+    years_be = [str(y) for y in range(current_be_year, current_be_year - 120, -1)]
 
     def section(text: str) -> rx.Component:
         return rx.text(
@@ -27,39 +47,60 @@ def register() -> rx.Component:
 
     grid = lambda *c: rx.grid(*c, columns={"initial": "1", "sm": "2"}, spacing="3", width="100%")
     return public_page(
-        # สคริปต์ล็อกวันที่สูงสุดและรีเซ็ตทันทีหาก iPad/iOS หมุนเลือกวัน/เดือน/ปีเกินวันปัจจุบัน
+        # สคริปต์รวมค่า วัน/เดือน/ปี พ.ศ. เป็น YYYY-MM-DD ลงใน input[name="dob"] และกันเลือกเกินวัน/เดือนปัจจุบัน
         rx.script(
-            """
-            (function() {
-                const getTodayStr = () => {
-                    const now = new Date();
-                    const yyyy = now.getFullYear();
-                    const mm = String(now.getMonth() + 1).padStart(2, '0');
-                    const dd = String(now.getDate()).padStart(2, '0');
-                    return `${yyyy}-${mm}-${dd}`;
-                };
-                const enforceMaxDob = () => {
-                    const dobInput = document.querySelector('input[name="dob"]');
-                    if (!dobInput) return;
-                    const maxStr = getTodayStr();
-                    dobInput.setAttribute('max', maxStr);
-                    if (!dobInput.dataset.dobBound) {
-                        dobInput.dataset.dobBound = '1';
-                        const validate = () => {
-                            const currentMax = getTodayStr();
-                            if (dobInput.value && dobInput.value > currentMax) {
-                                dobInput.value = currentMax;
-                                dobInput.dispatchEvent(new Event('input', { bubbles: true }));
-                                dobInput.dispatchEvent(new Event('change', { bubbles: true }));
-                            }
-                        };
-                        dobInput.addEventListener('change', validate);
-                        dobInput.addEventListener('blur', validate);
-                    }
-                };
-                enforceMaxDob();
-                setInterval(enforceMaxDob, 600);
-            })();
+            f"""
+            (function() {{
+                const maxYear = {current_ad_year};
+                const maxMonth = {today.month};
+                const maxDay = {today.day};
+
+                const syncDob = () => {{
+                    const dSel = document.getElementById('dob_day');
+                    const mSel = document.getElementById('dob_month');
+                    const ySel = document.getElementById('dob_year');
+                    const hiddenDob = document.getElementById('dob_hidden');
+                    if (!dSel || !mSel || !ySel || !hiddenDob) return;
+
+                    let d = parseInt(dSel.value || '0', 10);
+                    let m = parseInt(mSel.value || '0', 10);
+                    let yBe = parseInt(ySel.value || '0', 10);
+                    let yAd = yBe > 2400 ? yBe - 543 : yBe;
+
+                    // ปรับจำนวนวันสูงสุดตามเดือนและปีอธิกสุรทิน
+                    if (m > 0) {{
+                        const daysInMonth = new Date(yAd || 2000, m, 0).getDate();
+                        if (d > daysInMonth) {{
+                            d = daysInMonth;
+                            dSel.value = String(d).padStart(2, '0');
+                        }}
+                    }}
+
+                    // หากเลือกปีปัจจุบัน ห้ามเลือกเดือนหรือวันเกินวันปัจจุบัน
+                    if (yAd === maxYear) {{
+                        if (m > maxMonth) {{
+                            m = maxMonth;
+                            mSel.value = String(m).padStart(2, '0');
+                        }}
+                        if (m === maxMonth && d > maxDay) {{
+                            d = maxDay;
+                            dSel.value = String(d).padStart(2, '0');
+                        }}
+                    }}
+
+                    if (d > 0 && m > 0 && yAd > 1900) {{
+                        hiddenDob.value = `${{yAd}}-${{String(m).padStart(2, '0')}}-${{String(d).padStart(2, '0')}}`;
+                    }} else {{
+                        hiddenDob.value = '';
+                    }}
+                }};
+
+                document.addEventListener('change', (e) => {{
+                    if (e.target && ['dob_day', 'dob_month', 'dob_year'].includes(e.target.id)) {{
+                        syncDob();
+                    }}
+                }});
+            }})();
             """
         ),
         auth_card(
@@ -74,16 +115,39 @@ def register() -> rx.Component:
                         field("นามสกุล", rx.input(name="last_name", size="3", required=True, autocomplete="off"), True),
                         field("เพศ", rx.select(GENDERS, name="gender", default_value="ไม่ระบุ", size="3", width="100%")),
                         field(
-                            "วันเกิด (วัน/เดือน/ปี)",
-                            rx.input(
-                                name="dob",
-                                type="date",
-                                size="3",
-                                max=today_iso,
-                                required=True,
+                            "วันเกิด (วัน/เดือน/ปี พ.ศ.)",
+                            rx.box(
+                                rx.el.input(type="hidden", name="dob", id="dob_hidden", required=True),
+                                rx.grid(
+                                    rx.el.select(
+                                        rx.el.option("วัน", value="", disabled=True, selected=True),
+                                        *[rx.el.option(d, value=d) for d in days],
+                                        id="dob_day",
+                                        required=True,
+                                        class_name="dg-dob-select",
+                                    ),
+                                    rx.el.select(
+                                        rx.el.option("เดือน", value="", disabled=True, selected=True),
+                                        *[rx.el.option(label, value=val) for val, label in months],
+                                        id="dob_month",
+                                        required=True,
+                                        class_name="dg-dob-select",
+                                    ),
+                                    rx.el.select(
+                                        rx.el.option("ปี พ.ศ.", value="", disabled=True, selected=True),
+                                        *[rx.el.option(y, value=y) for y in years_be],
+                                        id="dob_year",
+                                        required=True,
+                                        class_name="dg-dob-select",
+                                    ),
+                                    columns="3",
+                                    spacing="2",
+                                    width="100%",
+                                ),
+                                width="100%",
                             ),
                             True,
-                            "รูปแบบ วัน/เดือน/ปี และต้องไม่เกินวัน/เดือน/ปีปัจจุบัน",
+                            "เลือก วัน / เดือน / ปี พ.ศ. (จำกัดไม่เกินวัน/เดือน/ปีปัจจุบัน)",
                         ),
                         field(
                             "เลขบัตรประชาชน / Passport",

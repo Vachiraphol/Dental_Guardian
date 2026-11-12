@@ -267,6 +267,7 @@ html body button.rt-Button[data-variant="solid"][style] {
     background: #8E4EC6 !important;
     background-color: #8E4EC6 !important;
     color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
     border: none !important;
     font-weight: 500 !important;
     box-shadow: 0 4px 14px rgba(142, 78, 198, 0.25) !important;
@@ -277,6 +278,7 @@ html body button.rt-Button[data-variant="solid"]:not([data-accent-color="red"]):
 html body a button.rt-Button[data-variant="solid"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]) *,
 html body button.rt-Button[data-variant="solid"][style] * {
     color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
 }
 
 html body button.rt-Button[data-variant="solid"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]):hover,
@@ -287,16 +289,19 @@ html body button.rt-Button[data-variant="solid"][style]:hover {
     box-shadow: 0 6px 18px rgba(142, 78, 198, 0.35) !important;
 }
 
-/* ปุ่มอ่อน ("เข้าสู่ระบบ", "บริการของเรา") -> พื้นหลังสีม่วงอ่อนพาสเทล #F7EDFE ตัวหนังสือสีม่วงเข้ม #793AAF */
+/* ปุ่มอ่อน ("เข้าสู่ระบบ", "บริการของเรา") -> พื้นหลังสีม่วงอ่อน #F7EDFE ตัวหนังสือสีม่วงเข้ม #8E4EC6 (สีเดียวกับพื้นหลังปุ่มสมัครสมาชิก) */
 html body header button.rt-Button[data-variant="soft"],
 html body button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]),
 html body a button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]),
 html body button.rt-Button[data-variant="soft"][style] {
+    --accent-a11: #8E4EC6 !important;
+    --accent-11: #8E4EC6 !important;
     background: #F7EDFE !important;
     background-color: #F7EDFE !important;
-    color: #793AAF !important;
+    color: #8E4EC6 !important;
+    -webkit-text-fill-color: #8E4EC6 !important;
     border: 1px solid #EBD5FA !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
     box-shadow: none !important;
     transition: all 0.2s ease !important;
 }
@@ -305,7 +310,8 @@ html body header button.rt-Button[data-variant="soft"] *,
 html body button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]) *,
 html body a button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]) *,
 html body button.rt-Button[data-variant="soft"][style] * {
-    color: #793AAF !important;
+    color: #8E4EC6 !important;
+    -webkit-text-fill-color: #8E4EC6 !important;
 }
 
 html body header button.rt-Button[data-variant="soft"]:hover,
@@ -313,12 +319,14 @@ html body button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):n
 html body button.rt-Button[data-variant="soft"][style]:hover {
     background: #EED9FC !important;
     background-color: #EED9FC !important;
-    color: #622994 !important;
+    color: #793AAF !important;
+    -webkit-text-fill-color: #793AAF !important;
 }
 
-/* ปุ่มกรอบ (Outline) -> ขอบม่วง ตัวหนังสือม่วงเข้ม */
+/* ปุ่มกรอบ (Outline) -> ขอบม่วง ตัวหนังสือม่วงเข้ม #8E4EC6 */
 html body button.rt-Button[data-variant="outline"][data-accent-color="purple"] {
     background-color: #FFFFFF !important;
-    color: #793AAF !important;
+    color: #8E4EC6 !important;
+    -webkit-text-fill-color: #8E4EC6 !important;
     border: 1.5px solid #8E4EC6 !important;
 }

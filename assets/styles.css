@@ -12,8 +12,8 @@ body,
 .dark,
 [data-theme='dark'] {
     color-scheme: only light !important;
-    --primary-color: #7C69AC;
-    --primary-light: #EFEBF5;
+    --primary-color: #8E4EC6;
+    --primary-light: #F4EAFC;
     --footer-bg: #F0EFEA;
 
     /* Override ตัวแปรสีพื้นฐานของ Radix Themes ให้เป็น Light Mode เสมอ */
@@ -327,4 +327,51 @@ button[role="checkbox"] svg {
     background-color: #FFFFFF !important;
     color: #653294 !important;
     border: 1.5px solid #8E4EC6 !important;
+}
+
+/* ========================================================
+   OVERRIDE ALL PURPLE BUTTONS (INCLUDING INLINE STYLES)
+   ======================================================== */
+/* ปุ่มทึบ (สมัครสมาชิก, นัดหมายล่วงหน้า) -> พื้นหลังม่วงเข้ม #8E4EC6 ตัวหนังสือขาว */
+button.rt-Button[data-variant="solid"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]),
+a button.rt-Button[data-variant="solid"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]) {
+    background: #8E4EC6 !important;
+    background-color: #8E4EC6 !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(142, 78, 198, 0.28) !important;
+}
+
+button.rt-Button[data-variant="solid"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]) *,
+a button.rt-Button[data-variant="solid"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]) * {
+    color: #FFFFFF !important;
+}
+
+button.rt-Button[data-variant="solid"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]):hover {
+    background: #793AAF !important;
+    background-color: #793AAF !important;
+}
+
+/* ปุ่มอ่อน (เข้าสู่ระบบ, บริการของเรา) -> พื้นหลังม่วงอ่อน #F4EAFC ตัวหนังสือม่วงเข้ม #793AAF */
+header button.rt-Button[data-variant="soft"],
+button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]),
+a button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]) {
+    background: #F4EAFC !important;
+    background-color: #F4EAFC !important;
+    color: #793AAF !important;
+    border: 1px solid #E2C6F9 !important;
+    font-weight: 600 !important;
+}
+
+header button.rt-Button[data-variant="soft"] *,
+button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]) *,
+a button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]) * {
+    color: #793AAF !important;
+}
+
+header button.rt-Button[data-variant="soft"]:hover,
+button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]):hover {
+    background: #E9D5FA !important;
+    background-color: #E9D5FA !important;
+    color: #5E268E !important;
 }

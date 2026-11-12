@@ -31,6 +31,10 @@ body,
 /* ========================================================
    2. CORE TEXT, CARD & SINGLE-BORDER INPUT LOCKS
    ======================================================== */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
 body,
 html,
 #__next,
@@ -43,6 +47,9 @@ html,
 }
 
 /* ล็อกสีข้อความแถบ Header และ Navbar (ยกเว้นปุ่ม .rt-Button) */
+.dg-header a:not(:has(.rt-Button)),
+.dg-header span:not(.rt-Button *),
+.dg-header p:not(.rt-Button *),
 header a:not(:has(.rt-Button)),
 header span:not(.rt-Button *),
 header p:not(.rt-Button *),
@@ -52,7 +59,7 @@ nav p:not(.rt-Button *) {
     color: #1E293B !important;
 }
 
-/* การ์ดและ Modal: ลบ div[class*="rt-Card"] ออกเพื่อไม่ให้เกิดกรอบซ้อน 2 ชั้น */
+/* การ์ดและ Modal: เส้นขอบชั้นเดียว ไม่ซ้อนทับ */
 .rt-Card,
 .rt-DialogContent,
 .radix-themes:is(.dark, [data-theme='dark']) .rt-Card,
@@ -60,6 +67,7 @@ nav p:not(.rt-Button *) {
     background-color: #FFFFFF !important;
     color: #1E293B !important;
     border: 1px solid #E2E8F0 !important;
+    max-width: 100% !important;
 }
 
 .rt-Card::before,
@@ -275,19 +283,38 @@ a[href*="reflex.dev"] * {
 }
 
 /* ========================================================
-   5. ENHANCE CHECKBOX VISIBILITY
+   5. ENHANCE CHECKBOX VISIBILITY (SINGLE BORDER)
    ======================================================== */
 .rt-CheckboxButton,
 .rt-BaseCheckboxRoot,
 button[role="checkbox"] {
     background-color: #FFFFFF !important;
     border: 1.5px solid #94A3B8 !important;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+    box-shadow: none !important;
     width: 18px !important;
     height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
     border-radius: 5px !important;
     cursor: pointer !important;
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    flex-shrink: 0 !important;
     transition: all 0.15s ease !important;
+}
+
+.rt-CheckboxButton::before,
+.rt-BaseCheckboxRoot::before,
+button[role="checkbox"]::before,
+.rt-CheckboxButton::after,
+.rt-BaseCheckboxRoot::after,
+button[role="checkbox"]::after {
+    display: none !important;
+    content: none !important;
+    border: none !important;
 }
 
 .rt-CheckboxButton:hover,
@@ -341,7 +368,7 @@ html body button.rt-Button[data-variant="solid"][style]:hover {
     box-shadow: 0 6px 18px rgba(142, 78, 198, 0.35) !important;
 }
 
-html body header button.rt-Button[data-variant="soft"],
+html body .dg-header button.rt-Button[data-variant="soft"],
 html body button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]),
 html body a button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]),
 html body button.rt-Button[data-variant="soft"][style] {
@@ -357,7 +384,7 @@ html body button.rt-Button[data-variant="soft"][style] {
     transition: all 0.2s ease !important;
 }
 
-html body header button.rt-Button[data-variant="soft"] *,
+html body .dg-header button.rt-Button[data-variant="soft"] *,
 html body button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]) *,
 html body a button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]) *,
 html body button.rt-Button[data-variant="soft"][style] * {
@@ -365,7 +392,7 @@ html body button.rt-Button[data-variant="soft"][style] * {
     -webkit-text-fill-color: #8E4EC6 !important;
 }
 
-html body header button.rt-Button[data-variant="soft"]:hover,
+html body .dg-header button.rt-Button[data-variant="soft"]:hover,
 html body button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]):hover,
 html body button.rt-Button[data-variant="soft"][style]:hover {
     background: #EED9FC !important;
@@ -384,32 +411,39 @@ html body button.rt-Button[data-variant="outline"][data-accent-color="purple"] {
 /* ========================================================
    7. RESPONSIVE ADAPTATION (MOBILE & IPAD / TABLET)
    ======================================================== */
+.rt-Container,
+form {
+    max-width: 100% !important;
+}
+
 /* หน้าจอมือถือ (Mobile: <= 640px) */
 @media (max-width: 640px) {
-    /* ย่อขนาดโลโก้และชื่อคลินิกไม่ให้ชนกับปุ่ม "เข้าสู่ระบบ" และไม่ดันขีด 3 ขีดตกขอบ */
-    header a:first-child img {
-        height: 34px !important;
-        width: 34px !important;
-        min-width: 34px !important;
+    .dg-header img {
+        height: 32px !important;
+        width: 32px !important;
+        min-width: 32px !important;
         object-fit: contain !important;
     }
-    header a:first-child .rt-Flex,
-    header a:first-child .rt-HStack {
+    .dg-header .dg-brand-link .rt-Flex,
+    .dg-header .dg-brand-link .rt-HStack {
         gap: 6px !important;
     }
-    header a:first-child .rt-Text:first-of-type {
+    .dg-header .dg-brand-link .rt-Text:first-of-type {
         font-size: 14px !important;
         line-height: 1.15 !important;
     }
-    header a:first-child .rt-Text:last-of-type {
+    .dg-header .dg-brand-link .rt-Text:last-of-type {
         font-size: 10px !important;
         line-height: 1.1 !important;
     }
-    header button.rt-Button[data-variant="soft"] {
+    .dg-header button.rt-Button[data-variant="soft"] {
         padding-left: 10px !important;
         padding-right: 10px !important;
         font-size: 12px !important;
         height: 30px !important;
+    }
+    .rt-Card {
+        padding: 16px !important;
     }
     .rt-SegmentedControlRoot {
         height: 40px !important;
@@ -423,14 +457,14 @@ html body button.rt-Button[data-variant="outline"][data-accent-color="purple"] {
 
 /* หน้าจอ iPad / แท็บเล็ต (Tablet: 641px - 1024px) */
 @media (min-width: 641px) and (max-width: 1024px) {
-    header img {
-        height: 48px !important;
+    .dg-header img {
+        height: 46px !important;
         width: auto !important;
     }
-    header a:first-child .rt-Text:first-of-type {
-        font-size: 19px !important;
+    .dg-header .dg-brand-link .rt-Text:first-of-type {
+        font-size: 18px !important;
     }
-    header a:first-child .rt-Text:last-of-type {
-        font-size: 13px !important;
+    .dg-header .dg-brand-link .rt-Text:last-of-type {
+        font-size: 12px !important;
     }
 }

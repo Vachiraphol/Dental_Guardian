@@ -256,8 +256,8 @@ def mobile_menu() -> rx.Component:
 def header() -> rx.Component:
     return rx.box(
         rx.hstack(
-            # 1. ฝั่งซ้าย: แบรนด์และโลโก้ (อนุญาตให้ย่อขนาดตามหน้าจอมือถือได้)
-            rx.link(brand(), href="/", underline="none", flex_shrink="1", min_width="0"),
+            # 1. ฝั่งซ้าย: แบรนด์และโลโก้
+            rx.link(brand(), href="/", underline="none", flex_shrink="1", min_width="0", class_name="dg-brand-link"),
 
             rx.spacer(),
 
@@ -307,4 +307,5 @@ def header() -> rx.Component:
         position="relative",
         z_index="50",
         width="100%",
+        class_name="dg-header",
     )

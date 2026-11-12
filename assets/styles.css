@@ -46,7 +46,6 @@ html,
     overflow-x: hidden !important;
 }
 
-/* ล็อกสีข้อความแถบ Header และ Navbar (ยกเว้นปุ่ม .rt-Button) */
 .dg-header a:not(:has(.rt-Button)),
 .dg-header span:not(.rt-Button *),
 .dg-header p:not(.rt-Button *),
@@ -59,7 +58,6 @@ nav p:not(.rt-Button *) {
     color: #1E293B !important;
 }
 
-/* การ์ดและ Modal: เส้นขอบชั้นเดียว ไม่ซ้อนทับ */
 .rt-Card,
 .rt-DialogContent,
 .radix-themes:is(.dark, [data-theme='dark']) .rt-Card,
@@ -75,7 +73,6 @@ nav p:not(.rt-Button *) {
     border: none !important;
 }
 
-/* ช่องกรอกข้อมูล (Input / Textarea / Select): มีเส้นขอบชั้นเดียวที่กรอบนอก */
 .rt-TextFieldRoot,
 .rt-TextAreaRoot,
 .rt-SelectTrigger,
@@ -88,7 +85,6 @@ nav p:not(.rt-Button *) {
     box-shadow: none !important;
 }
 
-/* ลบเส้นขอบชั้นในของ <input> และ <textarea> เพื่อไม่ให้ซ้อน 2 ชั้น */
 .rt-TextFieldRoot input,
 .rt-TextFieldInput,
 .rt-TextAreaRoot textarea,
@@ -100,7 +96,6 @@ nav p:not(.rt-Button *) {
     box-shadow: none !important;
 }
 
-/* Input/Select ทั่วไปที่ไม่ได้อยู่ใน rt-TextFieldRoot */
 input:not(.rt-TextFieldInput),
 textarea:not(.rt-TextAreaInput),
 select {
@@ -409,38 +404,101 @@ html body button.rt-Button[data-variant="outline"][data-accent-color="purple"] {
 }
 
 /* ========================================================
-   7. RESPONSIVE ADAPTATION (MOBILE & IPAD / TABLET)
+   7. RESPONSIVE ADAPTATION (DESKTOP, IPAD & MOBILE)
    ======================================================== */
 .rt-Container,
 form {
     max-width: 100% !important;
 }
 
+/* ควบคุมการสลับเมนู: จอ >= 1200px แสดงแคปซูลเมนู, จอ < 1200px (iPad & มือถือ) แสดงปุ่ม 3 ขีด */
+@media (min-width: 1200px) {
+    .dg-desktop-nav {
+        display: flex !important;
+    }
+    .dg-desktop-spacer {
+        display: block !important;
+    }
+    .dg-mobile-menu {
+        display: none !important;
+    }
+}
+
+@media (max-width: 1199px) {
+    .dg-desktop-nav,
+    .dg-desktop-spacer {
+        display: none !important;
+    }
+    .dg-mobile-menu {
+        display: inline-flex !important;
+    }
+}
+
+/* หน้าจอ iPad / แท็บเล็ต (641px - 1199px) */
+@media (min-width: 641px) and (max-width: 1199px) {
+    .dg-header img {
+        height: 44px !important;
+        width: auto !important;
+    }
+    .dg-header .dg-brand-link .rt-Text:first-of-type {
+        font-size: 18px !important;
+    }
+    .dg-header .dg-brand-link .rt-Text:last-of-type {
+        font-size: 12px !important;
+    }
+    /* ปรับขนาดปุ่ม Hero ("นัดหมายล่วงหน้า" / "บริการของเรา") ไม่ให้ใหญ่เกินและไม่ทับรูป */
+    .gradient-bg-animated button.rt-Button[size="4"],
+    .gradient-bg-animated a button.rt-Button {
+        height: 44px !important;
+        padding: 0 22px !important;
+        font-size: 15px !important;
+    }
+    .gradient-bg-animated img {
+        margin-top: 12px !important;
+    }
+}
+
 /* หน้าจอมือถือ (Mobile: <= 640px) */
 @media (max-width: 640px) {
+    /* ย่อขนาดโลโก้และข้อความคลินิกให้พอดีกับปุ่ม "เข้าสู่ระบบ" + "สมัครสมาชิก" + ปุ่ม 3 ขีด */
     .dg-header img {
-        height: 32px !important;
-        width: 32px !important;
-        min-width: 32px !important;
+        height: 28px !important;
+        width: 28px !important;
+        min-width: 28px !important;
         object-fit: contain !important;
     }
     .dg-header .dg-brand-link .rt-Flex,
     .dg-header .dg-brand-link .rt-HStack {
-        gap: 6px !important;
+        gap: 4px !important;
     }
     .dg-header .dg-brand-link .rt-Text:first-of-type {
-        font-size: 14px !important;
-        line-height: 1.15 !important;
-    }
-    .dg-header .dg-brand-link .rt-Text:last-of-type {
-        font-size: 10px !important;
+        font-size: 12px !important;
         line-height: 1.1 !important;
     }
-    .dg-header button.rt-Button[data-variant="soft"] {
-        padding-left: 10px !important;
-        padding-right: 10px !important;
-        font-size: 12px !important;
-        height: 30px !important;
+    .dg-header .dg-brand-link .rt-Text:last-of-type {
+        font-size: 9px !important;
+        line-height: 1.1 !important;
+    }
+    /* ปรับปุ่ม "เข้าสู่ระบบ" และ "สมัครสมาชิก" ด้านบนบนมือถือให้กะทัดรัด ไม่เบียดกัน */
+    .dg-header .dg-auth-buttons {
+        gap: 4px !important;
+    }
+    .dg-header .dg-auth-buttons button.rt-Button {
+        padding: 0 8px !important;
+        font-size: 11px !important;
+        height: 28px !important;
+        white-space: nowrap !important;
+    }
+    /* ปรับขนาดปุ่ม Hero ("นัดหมายล่วงหน้า" และ "บริการของเรา") ไม่ให้ใหญ่ล้นและไม่ทับรูปภาพด้านล่าง */
+    .gradient-bg-animated button.rt-Button[size="4"],
+    .gradient-bg-animated a button.rt-Button {
+        height: 40px !important;
+        padding: 0 18px !important;
+        font-size: 14px !important;
+        margin-bottom: 4px !important;
+    }
+    .gradient-bg-animated img {
+        margin-top: 16px !important;
     }
     .rt-Card {
         padding: 16px !important;
@@ -452,19 +510,5 @@ form {
     .rt-SegmentedControlItem {
         font-size: 13px !important;
         padding: 0 6px !important;
-    }
-}
-
-/* หน้าจอ iPad / แท็บเล็ต (Tablet: 641px - 1024px) */
-@media (min-width: 641px) and (max-width: 1024px) {
-    .dg-header img {
-        height: 46px !important;
-        width: auto !important;
-    }
-    .dg-header .dg-brand-link .rt-Text:first-of-type {
-        font-size: 18px !important;
-    }
-    .dg-header .dg-brand-link .rt-Text:last-of-type {
-        font-size: 12px !important;
     }
 }

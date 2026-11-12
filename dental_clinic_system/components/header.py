@@ -160,7 +160,7 @@ def user_menu() -> rx.Component:
                 ),
             ),
         ),
-        # บุคคลทั่วไป (ยังไม่ได้ล็อกอิน)
+        # บุคคลทั่วไป (ยังไม่ได้ล็อกอิน) -> แสดงครบทั้ง "เข้าสู่ระบบ" และ "สมัครสมาชิก" ทุกขนาดหน้าจอ
         rx.hstack(
             rx.link(
                 rx.button(
@@ -179,14 +179,14 @@ def user_menu() -> rx.Component:
                     color_scheme="purple",
                     radius="full",
                     size={"initial": "2", "md": "3"},
-                    padding_x={"initial": "14px", "md": "18px"},
+                    padding_x={"initial": "10px", "md": "18px"},
                 ),
                 href="/register",
-                display=["none", "block"],
             ),
-            spacing="2",
+            spacing="1",
             align="center",
             flex_shrink="0",
+            class_name="dg-auth-buttons",
         ),
     )
 
@@ -197,7 +197,7 @@ def mobile_menu() -> rx.Component:
 
     return rx.menu.root(
         rx.menu.trigger(
-            rx.icon_button(rx.icon(tag="menu", size=22), variant="ghost", color_scheme="gray", size="3"),
+            rx.icon_button(rx.icon(tag="menu", size=20), variant="ghost", color_scheme="gray", size="2"),
         ),
         rx.menu.content(
             rx.menu.item("หน้าแรก", on_click=rx.redirect("/")),
@@ -261,7 +261,7 @@ def header() -> rx.Component:
 
             rx.spacer(),
 
-            # 2. ตรงกลาง: แคปซูลเมนูนำทางหลัก (แสดงเฉพาะจอ Desktop >= 1280px)
+            # 2. ตรงกลาง: แคปซูลเมนูนำทางหลัก (แสดงเฉพาะจอ Desktop >= 1200px ผ่าน CSS .dg-desktop-nav)
             rx.hstack(
                 nav_link("หน้าแรก", "/"),
                 nav_link("จองคิว", "/booking"),
@@ -281,16 +281,16 @@ def header() -> rx.Component:
                 border="1px solid rgba(255, 255, 255, 0.95)",
                 box_shadow="0 4px 18px rgba(80, 60, 140, 0.08)",
                 backdrop_filter="blur(12px)",
-                display=["none", "none", "none", "none", "flex"],
                 flex_shrink="0",
+                class_name="dg-desktop-nav",
             ),
 
-            rx.spacer(display=["none", "none", "none", "none", "block"]),
+            rx.spacer(class_name="dg-desktop-spacer"),
 
-            # 3. ฝั่งขวา: ปุ่มเข้าสู่ระบบ / สมัครสมาชิก และปุ่มเมนูสำหรับมือถือ & iPad (< 1280px)
+            # 3. ฝั่งขวา: ปุ่มเข้าสู่ระบบ / สมัครสมาชิก และปุ่มเมนูสำหรับมือถือ & iPad (< 1200px)
             rx.hstack(
                 user_menu(),
-                rx.box(mobile_menu(), display=["block", "block", "block", "block", "none"]),
+                rx.box(mobile_menu(), class_name="dg-mobile-menu"),
                 align="center",
                 spacing="1",
                 flex_shrink="0",
@@ -299,9 +299,9 @@ def header() -> rx.Component:
             max_width="1280px",
             margin="0 auto",
             align="center",
-            padding_x=["10px", "20px", "24px"],
+            padding_x=["8px", "20px", "24px"],
             padding_y="10px",
-            gap=["6px", "12px"],
+            gap=["4px", "12px"],
         ),
         background_color="transparent",
         position="relative",

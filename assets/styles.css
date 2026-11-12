@@ -411,14 +411,12 @@ form {
     max-width: 100% !important;
 }
 
-/* บังคับให้ปุ่ม Submit ในฟอร์ม (เข้าสู่ระบบ / สร้างบัญชีผู้ใช้) กางเต็มความกว้างเสมอ */
 form button[type="submit"].rt-Button {
     width: 100% !important;
     display: flex !important;
     justify-content: center !important;
 }
 
-/* ควบคุมการสลับเมนู: จอ >= 1200px แสดงแคปซูลเมนู, จอ < 1200px (iPad & มือถือ) แสดงปุ่ม 3 ขีด */
 @media (min-width: 1200px) {
     .dg-desktop-nav {
         display: flex !important;
@@ -443,7 +441,6 @@ form button[type="submit"].rt-Button {
 
 /* หน้าจอ iPad / แท็บเล็ต (641px - 1199px) */
 @media (min-width: 641px) and (max-width: 1199px) {
-    /* ขยายโลโก้และชื่อแบรนด์ตรง Header บน iPad ให้ใหญ่ขึ้นสมส่วน */
     .dg-header img {
         height: 54px !important;
         width: auto !important;
@@ -455,13 +452,11 @@ form button[type="submit"].rt-Button {
     .dg-header .dg-brand-link .rt-Text:last-of-type {
         font-size: 13px !important;
     }
-    /* จัดสัดส่วนการ์ดหน้าเข้าสู่ระบบ/สมัครสมาชิกบน iPad ให้กึ่งกลางสวยงาม ไม่กางล้นเต็มจอ */
     main .rt-Card {
-        max-width: 600px !important;
+        max-width: 620px !important;
         margin-left: auto !important;
         margin-right: auto !important;
     }
-    /* ปรับขนาดปุ่ม Hero ("นัดหมายล่วงหน้า" / "บริการของเรา") ไม่ให้ใหญ่เกินและไม่ทับรูป */
     .gradient-bg-animated button.rt-Button[size="4"],
     .gradient-bg-animated a button.rt-Button {
         height: 44px !important;
@@ -475,7 +470,6 @@ form button[type="submit"].rt-Button {
 
 /* หน้าจอมือถือ (Mobile: <= 640px) */
 @media (max-width: 640px) {
-    /* ขยายโลโก้และชื่อแบรนด์ตรง Header บนมือถือให้ใหญ่ขึ้นชัดเจน */
     .dg-header img {
         height: 36px !important;
         width: 36px !important;
@@ -494,7 +488,6 @@ form button[type="submit"].rt-Button {
         font-size: 10px !important;
         line-height: 1.1 !important;
     }
-    /* ปุ่ม "เข้าสู่ระบบ" และ "สมัครสมาชิก" ด้านบนบนมือถือ */
     .dg-header .dg-auth-buttons {
         gap: 4px !important;
     }
@@ -504,7 +497,6 @@ form button[type="submit"].rt-Button {
         height: 28px !important;
         white-space: nowrap !important;
     }
-    /* ปรับขนาดปุ่ม Hero ("นัดหมายล่วงหน้า" และ "บริการของเรา") ไม่ให้ทับรูปภาพด้านล่าง */
     .gradient-bg-animated button.rt-Button[size="4"],
     .gradient-bg-animated a button.rt-Button {
         height: 40px !important;
@@ -526,4 +518,71 @@ form button[type="submit"].rt-Button {
         font-size: 13px !important;
         padding: 0 6px !important;
     }
+}
+
+/* ========================================================
+   8. CENTER AUTH CARD & FIX BOOKING SLOTS / STEPPER
+   ======================================================== */
+main .rt-Card,
+main .rt-Card > .rt-Flex,
+main .rt-Card > .rt-VStack {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+
+@media (min-width: 641px) and (max-width: 1199px) {
+    main .rt-Card {
+        max-width: 640px !important;
+    }
+}
+
+@media (max-width: 640px) {
+    main {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+    main .rt-Card {
+        padding: 20px 16px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+    main .rt-Card > .rt-Flex:first-child,
+    main .rt-Card > .rt-VStack:first-child {
+        align-items: center !important;
+        text-align: center !important;
+    }
+}
+
+/* ป้องกันช่องเลือกวัน & ช่องเลือกช่วงเวลา ("ว่าง 2 คิว" / "นอกเวลาทำการ") ถูกบีบจนตกขอบล่าง */
+main .rt-Card .rt-Grid button,
+main .rt-Card .rt-Grid [role="button"],
+main .rt-Card .rt-Grid > div {
+    height: auto !important;
+    min-height: 56px !important;
+    padding: 8px 6px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2px !important;
+    line-height: 1.25 !important;
+    text-align: center !important;
+    overflow: visible !important;
+}
+
+main .rt-Card .rt-Grid button .rt-Text,
+main .rt-Card .rt-Grid [role="button"] .rt-Text,
+main .rt-Card .rt-Grid > div .rt-Text {
+    text-align: center !important;
+    line-height: 1.25 !important;
+    display: block !important;
+}
+
+/* คงสัดส่วนวงกลมเลขลำดับขั้นตอน (1 - 2 - 3) ไม่ให้ถูกบีบเป็นวงรี */
+main .rt-Flex [style*="border-radius: 9999px"],
+main .rt-HStack [style*="border-radius: 9999px"],
+main .rt-Box[style*="border-radius: 999"] {
+    flex-shrink: 0 !important;
 }

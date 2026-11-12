@@ -27,22 +27,38 @@ def register() -> rx.Component:
 
     grid = lambda *c: rx.grid(*c, columns={"initial": "1", "sm": "2"}, spacing="3", width="100%")
     return public_page(
-        # สคริปต์ล็อกวันที่สูงสุดในปฏิทินวันเกิดให้เป็นวัน/เดือน/ปีปัจจุบันของเครื่องผู้ใช้เสมอ
+        # สคริปต์ล็อกวันที่สูงสุดและรีเซ็ตทันทีหาก iPad/iOS หมุนเลือกวัน/เดือน/ปีเกินวันปัจจุบัน
         rx.script(
             """
             (function() {
-                const lockDob = () => {
+                const getTodayStr = () => {
+                    const now = new Date();
+                    const yyyy = now.getFullYear();
+                    const mm = String(now.getMonth() + 1).padStart(2, '0');
+                    const dd = String(now.getDate()).padStart(2, '0');
+                    return `${yyyy}-${mm}-${dd}`;
+                };
+                const enforceMaxDob = () => {
                     const dobInput = document.querySelector('input[name="dob"]');
-                    if (dobInput) {
-                        const now = new Date();
-                        const yyyy = now.getFullYear();
-                        const mm = String(now.getMonth() + 1).padStart(2, '0');
-                        const dd = String(now.getDate()).padStart(2, '0');
-                        dobInput.max = `${yyyy}-${mm}-${dd}`;
+                    if (!dobInput) return;
+                    const maxStr = getTodayStr();
+                    dobInput.setAttribute('max', maxStr);
+                    if (!dobInput.dataset.dobBound) {
+                        dobInput.dataset.dobBound = '1';
+                        const validate = () => {
+                            const currentMax = getTodayStr();
+                            if (dobInput.value && dobInput.value > currentMax) {
+                                dobInput.value = currentMax;
+                                dobInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                dobInput.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                        };
+                        dobInput.addEventListener('change', validate);
+                        dobInput.addEventListener('blur', validate);
                     }
                 };
-                lockDob();
-                setTimeout(lockDob, 500);
+                enforceMaxDob();
+                setInterval(enforceMaxDob, 600);
             })();
             """
         ),

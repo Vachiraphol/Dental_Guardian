@@ -1,8 +1,13 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from enum import Enum
 from typing import Optional, List
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel, Relationship
+
+
+# ฟังก์ชันช่วยดึงเวลาปัจจุบันแบบ UTC (สำหรับ api.py และ api_queue.py)
+def get_utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class UserRole(str, Enum):
@@ -27,8 +32,8 @@ class User(SQLModel, table=True):
     hashed_password: str = Field(nullable=False)
     role: UserRole = Field(default=UserRole.PATIENT, nullable=False)
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=get_utc_now)
+    updated_at: datetime = Field(default_factory=get_utc_now)
 
     # Relationships
     profile: Optional["PatientProfile"] = Relationship(back_populates="user")
@@ -52,7 +57,7 @@ class PatientProfile(SQLModel, table=True):
     # ข้อมูลประวัติการแพทย์ (Medical History)
     congenital_disease: Optional[str] = Field(default="ไม่มี", description="โรคประจำตัว")
     drug_allergy: Optional[str] = Field(default="ไม่มี", description="ประวัติแพ้ยา")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=get_utc_now)
 
     # Relationships
     user: Optional[User] = Relationship(back_populates="profile")
@@ -74,7 +79,7 @@ class PatientProfile(SQLModel, table=True):
         return v_clean
 
 
-# --- 3. Clinical & Booking Models (คงไว้ตามระบบเดิม) ---
+# --- 3. Clinical & Booking Models ---
 class QueueBooking(SQLModel, table=True):
     __tablename__ = "queue_bookings"
 
@@ -84,8 +89,8 @@ class QueueBooking(SQLModel, table=True):
     time_slot: str = Field(nullable=False)
     service_type: str = Field(nullable=False)
     dentist_id: Optional[int] = Field(default=None)
-    status: str = Field(default="confirmed")  # pending, confirmed, cancelled, completed
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    status: str = Field(default="confirmed")
+    created_at: datetime = Field(default_factory=get_utc_now)
 
 
 class Appointment(SQLModel, table=True):
@@ -98,7 +103,7 @@ class Appointment(SQLModel, table=True):
     treatment_type: str = Field(nullable=False)
     notes: Optional[str] = Field(default=None)
     status: str = Field(default="scheduled")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=get_utc_now)
 
 
 class TreatmentEntry(SQLModel, table=True):
@@ -112,4 +117,4 @@ class TreatmentEntry(SQLModel, table=True):
     icd10_name: str = Field(nullable=False)
     procedure_name: str = Field(nullable=False)
     note: Optional[str] = Field(default=None)
-    recorded_at: datetime = Field(default_factory=datetime.utcnow)
+    recorded_at: datetime = Field(default_factory=get_utc_now)

@@ -3,13 +3,6 @@ import reflex as rx
 from dental_clinic_system.components.brand import brand
 from dental_clinic_system.state import AppState
 
-PUBLIC_LINKS = [
-    ("หน้าแรก", "/"),
-    ("จองคิว", "/booking"),
-    ("นัดหมายของฉัน", "/my-appointments"),
-    ("ประวัติการรักษา", "/my-history"),
-]
-
 
 def nav_link(text: str, href, icon: str = "", text_size: str = "3", icon_size: int = 18) -> rx.Component:
     return rx.link(
@@ -21,7 +14,7 @@ def nav_link(text: str, href, icon: str = "", text_size: str = "3", icon_size: i
         ),
         href=href,
         color="var(--slate-12)",
-        padding_x="18px",
+        padding_x="16px",
         padding_y="8px",
         border_radius="999px",
         transition="all 0.2s ease",
@@ -49,7 +42,7 @@ def user_menu() -> rx.Component:
                         AppState.user_name,
                         size="2",
                         weight="medium",
-                        max_width="140px",
+                        max_width="130px",
                         overflow="hidden",
                         text_overflow="ellipsis",
                         white_space="nowrap",
@@ -68,7 +61,6 @@ def user_menu() -> rx.Component:
             rx.menu.content(
                 rx.cond(
                     is_dentist,
-                    # เมนูสำหรับทันตแพทย์ (ทำได้เฉพาะบันทึกการรักษา และดูตารางเวลาทำงาน)
                     rx.fragment(
                         rx.menu.item(
                             rx.icon(tag="file_pen_line", size=15),
@@ -83,7 +75,6 @@ def user_menu() -> rx.Component:
                     ),
                     rx.cond(
                         is_staff_or_admin,
-                        # เมนูสำหรับเจ้าหน้าที่ / แอดมิน
                         rx.fragment(
                             rx.menu.item(
                                 rx.icon(tag="layout_dashboard", size=15),
@@ -136,7 +127,6 @@ def user_menu() -> rx.Component:
                                 on_click=rx.redirect("/records/summary"),
                             ),
                         ),
-                        # เมนูสำหรับคนไข้ทั่วไป
                         rx.fragment(
                             rx.menu.item(
                                 rx.icon(tag="user", size=15),
@@ -178,17 +168,25 @@ def user_menu() -> rx.Component:
                     variant="soft",
                     color_scheme="purple",
                     radius="full",
-                    size={"initial": "2", "sm": "3"},
-                    padding_x={"initial": "12px", "sm": "16px"},
+                    size={"initial": "2", "md": "3"},
+                    padding_x={"initial": "12px", "md": "16px"},
                 ),
                 href="/login",
             ),
             rx.link(
-                rx.button("สมัครสมาชิก", color_scheme="purple", radius="full", size="3"),
+                rx.button(
+                    "สมัครสมาชิก",
+                    color_scheme="purple",
+                    radius="full",
+                    size={"initial": "2", "md": "3"},
+                    padding_x={"initial": "14px", "md": "18px"},
+                ),
                 href="/register",
                 display=["none", "block"],
             ),
             spacing="2",
+            align="center",
+            flex_shrink="0",
         ),
     )
 
@@ -199,7 +197,7 @@ def mobile_menu() -> rx.Component:
 
     return rx.menu.root(
         rx.menu.trigger(
-            rx.icon_button(rx.icon(tag="menu"), variant="ghost", color_scheme="gray", size="3"),
+            rx.icon_button(rx.icon(tag="menu", size=22), variant="ghost", color_scheme="gray", size="3"),
         ),
         rx.menu.content(
             rx.menu.item("หน้าแรก", on_click=rx.redirect("/")),
@@ -259,55 +257,51 @@ def header() -> rx.Component:
     return rx.box(
         rx.hstack(
             # 1. ฝั่งซ้าย: แบรนด์และโลโก้
-            rx.link(brand(), href="/", underline="none", flex_shrink="1", min_width="0"),
-
-            # 2. ตรงกลาง: แคปซูลเมนูนำทางหลัก จัดกึ่งกลางหน้าจออย่างสมดุล
-            rx.box(
-                rx.hstack(
-                    nav_link("หน้าแรก", "/"),
-                    nav_link("จองคิว", "/booking"),
-                    nav_link(
-                        "นัดหมายของฉัน",
-                        rx.cond(AppState.is_logged_in, "/my-appointments", "/login"),
-                    ),
-                    nav_link(
-                        "ประวัติการรักษา",
-                        rx.cond(AppState.is_logged_in, "/my-history", "/login"),
-                    ),
-                    align="center",
-                    spacing="1",
-                    padding="6px 8px",
-                    border_radius="999px",
-                    background_color="rgba(255, 255, 255, 0.85)",
-                    border="1px solid rgba(255, 255, 255, 0.95)",
-                    box_shadow="0 4px 18px rgba(80, 60, 140, 0.08)",
-                    backdrop_filter="blur(12px)",
-                ),
-                position="absolute",
-                left="50%",
-                transform="translateX(-50%)",
-                display=["none", "none", "none", "block"],
-                z_index="10",
-            ),
+            rx.link(brand(), href="/", underline="none", flex_shrink="0"),
 
             rx.spacer(),
 
-            # 3. ฝั่งขวา: โปรไฟล์ผู้ใช้ และ Hamburger menu สำหรับมือถือ
+            # 2. ตรงกลาง: แคปซูลเมนูนำทางหลัก (ไม่ใช้ position="absolute" และแสดงเฉพาะจอ Desktop >= 1280px)
+            rx.hstack(
+                nav_link("หน้าแรก", "/"),
+                nav_link("จองคิว", "/booking"),
+                nav_link(
+                    "นัดหมายของฉัน",
+                    rx.cond(AppState.is_logged_in, "/my-appointments", "/login"),
+                ),
+                nav_link(
+                    "ประวัติการรักษา",
+                    rx.cond(AppState.is_logged_in, "/my-history", "/login"),
+                ),
+                align="center",
+                spacing="1",
+                padding="6px 8px",
+                border_radius="999px",
+                background_color="rgba(255, 255, 255, 0.85)",
+                border="1px solid rgba(255, 255, 255, 0.95)",
+                box_shadow="0 4px 18px rgba(80, 60, 140, 0.08)",
+                backdrop_filter="blur(12px)",
+                display=["none", "none", "none", "none", "flex"],
+                flex_shrink="0",
+            ),
+
+            rx.spacer(display=["none", "none", "none", "none", "block"]),
+
+            # 3. ฝั่งขวา: ปุ่มเข้าสู่ระบบ / สมัครสมาชิก และปุ่มเมนูสำหรับมือถือ & iPad (< 1280px)
             rx.hstack(
                 user_menu(),
-                rx.box(mobile_menu(), display=["block", "block", "block", "none"]),
+                rx.box(mobile_menu(), display=["block", "block", "block", "block", "none"]),
                 align="center",
                 spacing="2",
                 flex_shrink="0",
-                z_index="20",
             ),
             width="100%",
             max_width="1280px",
             margin="0 auto",
             align="center",
-            padding_x=["12px", "24px"],
+            padding_x=["12px", "20px", "24px"],
             padding_y="12px",
-            position="relative",
+            gap="12px",
         ),
         background_color="transparent",
         position="relative",

@@ -16,6 +16,9 @@ from dental_clinic_system.state import (
     tooth_label,
 )
 
+IMPORT_UPLOAD_ID = "chart_import"
+IMPORT_MAX_BYTES = 2 * 1024 * 1024
+
 
 # --- Custom Light Theme Components สำหรับหน้านี้โดยเฉพาะ ---
 def page_header(title: str, subtitle: str, *actions) -> rx.Component:
@@ -30,6 +33,8 @@ def page_header(title: str, subtitle: str, *actions) -> rx.Component:
             *actions,
             align="center",
             width="100%",
+            wrap="wrap",
+            gap="12px",
         ),
         background_color="white",
         border="1px solid #E2E8F0",
@@ -223,6 +228,149 @@ def entry_form() -> rx.Component:
     )
 
 
+def import_status(row) -> rx.Component:
+    return rx.match(
+        row["status"],
+        ("ok", rx.badge("พร้อมนำเข้า", color_scheme="green", variant="soft")),
+        ("dup", rx.badge("ซ้ำ · ข้าม", color_scheme="gray", variant="soft")),
+        rx.badge("ต้องแก้ไข", color_scheme="red", variant="soft"),
+    )
+
+
+def import_row(row) -> rx.Component:
+    return rx.table.row(
+        rx.table.cell(row["row"]),
+        rx.table.cell(row["date_th"]),
+        rx.table.cell(row["tooth"]),
+        rx.table.cell(row["icd"]),
+        rx.table.cell(row["procedure"]),
+        rx.table.cell(rx.text(row["note"], size="2", max_width="200px")),
+        rx.table.cell(
+            rx.vstack(
+                import_status(row),
+                rx.cond(row["message"] != "", rx.text(row["message"], size="1", color="var(--red-11)")),
+                spacing="1",
+            )
+        ),
+    )
+
+
+def import_preview() -> rx.Component:
+    counts = AppState.import_counts
+    return rx.vstack(
+        rx.hstack(
+            rx.badge("พร้อมนำเข้า ", counts["ok"], color_scheme="green", variant="soft"),
+            rx.badge("ซ้ำ ", counts["dup"], color_scheme="gray", variant="soft"),
+            rx.badge("ต้องแก้ไข ", counts["error"], color_scheme="red", variant="soft"),
+            spacing="2",
+            wrap="wrap",
+        ),
+        rx.cond(
+            AppState.import_teeth.length() > 0,
+            rx.text("ซี่ฟันที่จะมีข้อมูลเพิ่ม: ", AppState.import_teeth.join(", "), size="2", color="#334155"),
+        ),
+        rx.cond(
+            counts["error"] > 0,
+            rx.callout(
+                "แก้แถวที่มีปัญหาในไฟล์ แล้วอัปโหลดใหม่ ระบบจะยังไม่บันทึกข้อมูลใดๆ",
+                icon="circle_alert",
+                color_scheme="red",
+                size="1",
+                width="100%",
+            ),
+        ),
+        rx.box(
+            rx.table.root(
+                rx.table.header(
+                    rx.table.row(
+                        *[
+                            rx.table.column_header_cell(h)
+                            for h in ["แถว", "วันที่รักษา", "ซี่ฟัน", "ICD-10", "การรักษา", "หมายเหตุ", "สถานะ"]
+                        ]
+                    )
+                ),
+                rx.table.body(rx.foreach(AppState.import_rows, import_row)),
+                size="1",
+                width="100%",
+            ),
+            width="100%",
+            max_height="320px",
+            overflow="auto",
+        ),
+        width="100%",
+        spacing="3",
+    )
+
+
+def import_dialog() -> rx.Component:
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title("นำเข้าไฟล์สู่ผังฟัน"),
+            rx.dialog.description(
+                "นำเข้าให้ผู้ป่วย: ",
+                rx.text.strong(AppState.selected_patient_option),
+                size="2",
+                color="#334155",
+            ),
+            rx.vstack(
+                rx.upload(
+                    rx.vstack(
+                        rx.icon(tag="file_up", size=24, color="#64748B"),
+                        rx.text("ลากไฟล์มาวาง หรือคลิกเพื่อเลือกไฟล์", size="2", color="#334155"),
+                        rx.text("รองรับ .csv และ .xlsx ไม่เกิน 2 MB", size="1", color="#64748B"),
+                        align="center",
+                        spacing="1",
+                    ),
+                    id=IMPORT_UPLOAD_ID,
+                    accept={
+                        "text/csv": [".csv"],
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+                    },
+                    multiple=False,
+                    max_files=1,
+                    max_size=IMPORT_MAX_BYTES,
+                    on_drop=AppState.handle_chart_import(rx.upload_files(upload_id=IMPORT_UPLOAD_ID)),
+                    on_drop_rejected=rx.toast.error("รองรับเฉพาะไฟล์ .csv และ .xlsx ขนาดไม่เกิน 2 MB ครั้งละ 1 ไฟล์"),
+                    border="1px dashed #CBD5E1",
+                    border_radius="12px",
+                    padding="20px",
+                    width="100%",
+                    cursor="pointer",
+                ),
+                rx.text("คอลัมน์: วันที่รักษา, ซี่ฟัน (FDI), ICD-10, การรักษา, หมายเหตุ, ทันตแพทย์", size="1", color="#64748B"),
+                rx.cond(AppState.import_file_name != "", rx.text("ไฟล์: " + AppState.import_file_name, size="2", color="#334155")),
+                rx.cond(
+                    AppState.import_error != "",
+                    rx.callout(AppState.import_error, icon="circle_alert", color_scheme="red", size="1", width="100%"),
+                ),
+                rx.cond(AppState.import_rows.length() > 0, import_preview()),
+                rx.hstack(
+                    rx.dialog.close(rx.button("ยกเลิก", type="button", variant="soft", color_scheme="gray")),
+                    rx.button(
+                        "ยืนยันนำเข้า ",
+                        AppState.import_counts["ok"],
+                        " รายการ",
+                        type="button",
+                        color_scheme="green",
+                        disabled=~AppState.can_confirm_import,
+                        on_click=AppState.confirm_chart_import,
+                    ),
+                    justify="end",
+                    width="100%",
+                    spacing="2",
+                ),
+                width="100%",
+                spacing="3",
+                margin_top="12px",
+            ),
+            width="760px",
+            max_width="calc(100vw - 32px)",
+        ),
+        open=AppState.import_open,
+        on_open_change=AppState.set_import_open,
+    )
+
+
 @rx.page(
     route="/records",
     title="บันทึกการรักษาและผังฟัน - Dental Guardian",
@@ -235,6 +383,17 @@ def records() -> rx.Component:
             "บันทึกการรักษาและผังฟัน",
             "คลิกซี่ฟันบนผัง หรือเลือก/พิมพ์เลขซี่ฟัน แล้วบันทึกการวินิจฉัยและการรักษา",
             rx.cond(
+                AppState.is_dentist & AppState.has_patients,
+                rx.button(
+                    rx.icon(tag="file_up", size=14),
+                    "นำเข้าไฟล์",
+                    variant="soft",
+                    color_scheme="green",
+                    on_click=AppState.set_import_open(True),
+                ),
+                rx.fragment(),
+            ),
+            rx.cond(
                 AppState.user_role != "dentist",
                 rx.button(
                     rx.icon(tag="file_text", size=14),
@@ -246,6 +405,7 @@ def records() -> rx.Component:
                 rx.fragment(),
             ),
         ),
+        import_dialog(),
         patient_picker(),
         rx.cond(
             AppState.has_patients,

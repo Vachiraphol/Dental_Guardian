@@ -333,6 +333,12 @@ class AppState(rx.State):
     selected_tooth: str = ""         # ซี่ฟันที่เลือก
     my_selected_tooth: str = ""      # ซี่ฟันที่คนไข้เลือกดูในหน้า my_history
 
+    # --- นำเข้าไฟล์ประวัติการรักษาเข้าผังฟัน (เฉพาะทันตแพทย์) ---
+    import_open: bool = False
+    import_file_name: str = ""
+    import_error: str = ""
+    import_rows: list[dict[str, str]] = []
+
     @rx.event
     def set_chart_mode(self, mode: str):
         """สลับระหว่างผังฟันแท้และผังฟันน้ำนมด้วยตนเองผ่าน Dropdown."""
@@ -520,6 +526,10 @@ class AppState(rx.State):
     @rx.var
     def is_staff(self) -> bool:
         return self.user_role == "staff"
+
+    @rx.var
+    def is_dentist(self) -> bool:
+        return self.user_role == "dentist"
 
     @rx.var
     def user_initials(self) -> str:
@@ -946,6 +956,20 @@ class AppState(rx.State):
     @rx.var
     def sel_tooth_entries(self) -> list[dict[str, str]]:
         return [e for e in self.sel_entries if e["tooth"] == self.selected_tooth]
+
+    @rx.var
+    def import_counts(self) -> dict[str, int]:
+        statuses = [r["status"] for r in self.import_rows]
+        return {status: statuses.count(status) for status in ("ok", "dup", "error")}
+
+    @rx.var
+    def import_teeth(self) -> list[str]:
+        return sorted({r["tooth"] for r in self.import_rows if r["status"] == "ok"})
+
+    @rx.var
+    def can_confirm_import(self) -> bool:
+        # all or nothing: a half-imported history is worse than asking for a corrected file
+        return self.import_counts["ok"] > 0 and self.import_counts["error"] == 0
 
     @rx.var
     def selected_tooth_label(self) -> str:
@@ -2416,7 +2440,29 @@ class AppState(rx.State):
         self.entry_note = ""
         self.load_schedule_data()
         return rx.toast.success(f"บันทึกการรักษาซี่ {self.entry_tooth} เรียบร้อยแล้ว")
-    
+
+    @rx.event
+    def set_import_open(self, value: bool):
+        self.import_open = value
+        self.import_file_name = self.import_error = ""
+        self.import_rows = []
+
+    @rx.event
+    async def handle_chart_import(self, files: list[rx.UploadFile]):
+        if not files:
+            return
+        self.set_import_open(True)
+        self.import_file_name = files[0].name or ""
+        # TODO(backend): อ่าน files[0] (.csv / .xlsx) ของผู้ป่วย self.selected_pid แล้วใส่ผลตรวจแต่ละแถวใน
+        # self.import_rows (ฟิลด์ตาม BACKEND_HANDOFF.md) ถ้าอ่านไฟล์ไม่ได้ให้ตั้ง self.import_error
+        return not_connected("นำเข้าไฟล์เข้าผังฟัน")
+
+    @rx.event
+    def confirm_chart_import(self):
+        # TODO(backend): ตรวจว่า user_role เป็น "dentist" แล้วบันทึกแถว status "ok" ลงประวัติการรักษาของ
+        # self.selected_pid โดยใช้วันที่รักษาจากไฟล์ จากนั้นโหลด self.entries ใหม่และเรียก self.set_import_open(False)
+        return not_connected("นำเข้าไฟล์เข้าผังฟัน")
+
     @rx.event
     def select_my_tooth(self, tooth: str):
         """เลือก/ยกเลิกเลือกซี่ฟันในหน้าประวัติการรักษาของคนไข้ (/my-history)"""

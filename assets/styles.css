@@ -194,3 +194,48 @@ body, html, .rt-Text, .rt-Heading, .rt-Button, .rt-Link, .rt-Box, .rt-Flex, .rt-
 .dg-table-wrap .rt-TableRoot { min-width: 880px; }
 .dg-scroll-x { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .dg-scroll-x::-webkit-scrollbar { display: none; }
+
+/* ========================================================
+   4. HIDE REFLEX BADGE & ENHANCE ROLE SELECTOR
+   ======================================================== */
+/* ซ่อนป้าย Reflex มุมขวาล่างอย่างเด็ดขาด */
+a[href*="reflex.dev"],
+a[href*="reflex.dev"] * {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* ปรับสีปุ่มเลือก Role (ผู้ป่วย / หมอฟัน / พยาบาล) ให้ชัดเจน */
+.rt-SegmentedControlRoot {
+    background-color: #EFEBF5 !important;
+    border: 1px solid #D8CEEA !important;
+    padding: 4px !important;
+    border-radius: 10px !important;
+}
+
+.rt-SegmentedControlItem[data-state="on"],
+.rt-SegmentedControlItem[aria-checked="true"] {
+    background-color: #7C69AC !important;
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 6px rgba(124, 105, 172, 0.35) !important;
+}
+
+.rt-SegmentedControlItem[data-state="on"] *,
+.rt-SegmentedControlItem[aria-checked="true"] * {
+    color: #FFFFFF !important;
+}
+
+.rt-SegmentedControlItem[data-state="off"],
+.rt-SegmentedControlItem[aria-checked="false"] {
+    color: #475569 !important;
+    font-weight: 500 !important;
+}
+
+.rt-SegmentedControlItem[data-state="off"]:hover,
+.rt-SegmentedControlItem[aria-checked="false"]:hover {
+    color: #1E293B !important;
+    background-color: rgba(124, 105, 172, 0.12) !important;
+}

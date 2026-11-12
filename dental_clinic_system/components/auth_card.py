@@ -27,4 +27,18 @@ def auth_card(icon: str, title: str, subtitle: str, *children: rx.Component, max
 
 
 def password_input(name: str, placeholder: str = "••••••••", **props) -> rx.Component:
-    return rx.input(name=name, type="password", placeholder=placeholder, size="3", width="100%", required=True, **props)
+    props.setdefault("required", True)
+    return rx.input(
+        name=name,
+        type="password",
+        placeholder=placeholder,
+        size="3",
+        width="100%",
+        autocomplete="new-password",
+        custom_attrs={
+            "data-lpignore": "true",
+            "data-1p-ignore": "true",
+            "data-form-type": "other",
+        },
+        **props,
+    )

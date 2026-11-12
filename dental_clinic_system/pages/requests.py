@@ -83,8 +83,12 @@ def reject_dialog() -> rx.Component:
     )
 
 
-@rx.page(route="/requests", title="จัดการคำขอจองคิว - Dental Guardian")
-def requests() -> rx.Component:
+@rx.page(
+    route="/requests",
+    title="จัดการคำขอจองคิว - Dental Guardian",
+    on_load=[AppState.check_staff_access, AppState.load_schedule_data],
+)
+def requests():
     return staff_page(
         "requests",
         page_header(

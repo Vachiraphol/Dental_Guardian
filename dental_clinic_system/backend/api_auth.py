@@ -1,0 +1,161 @@
+import re
+from datetime import date
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel, EmailStr, field_validator
+from sqlmodel import Session, select
+
+from .database import get_session
+from .models import User, PatientProfile, UserRole, Gender
+from .auth import (
+    verify_password,
+    get_password_hash,
+    create_access_token,
+    get_current_user,
+)
+
+router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+
+
+class RegisterPatientRequest(BaseModel):
+    email: EmailStr
+    password: str
+    first_name: str
+    last_name: str
+    id_card: str
+    phone: str
+    gender: Gender = Gender.OTHER
+    birth_date: date
+    address: Optional[str] = None
+    congenital_disease: Optional[str] = "ไม่มี"
+    drug_allergy: Optional[str] = "ไม่มี"
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษตัวพิมพ์ใหญ่ (A-Z) อย่างน้อย 1 ตัว")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษตัวพิมพ์เล็ก (a-z) อย่างน้อย 1 ตัว")
+        if not re.search(r"\d", v):
+            raise ValueError("รหัสผ่านต้องมีตัวเลข (0-9) อย่างน้อย 1 ตัว")
+        return v
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        v_clean = v.strip().replace("-", "")
+        if not v_clean.startswith("0") or len(v_clean) != 10 or not v_clean.isdigit():
+            raise ValueError("เบอร์โทรศัพท์มือถือต้องขึ้นต้นด้วย 0 และมี 10 หลักเท่านั้น")
+        return v_clean
+
+    @field_validator("birth_date")
+    @classmethod
+    def validate_birth_date(cls, v: date) -> date:
+        current_year = date.today().year
+        birth_year = v.year - 543 if v.year > 2500 else v.year
+        if birth_year > current_year:
+            raise ValueError("ปีเกิดในปฏิทินห้ามเกินปีปัจจุบัน")
+        return v
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    role: str
+    user_id: int
+    full_name: str
+
+
+class UserProfileResponse(BaseModel):
+    id: int
+    email: str
+    role: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+    hn: Optional[str] = None
+
+
+@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+def register_patient(payload: RegisterPatientRequest, session: Session = Depends(get_session)):
+    existing_user = session.exec(select(User).where(User.email == payload.email)).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="อีเมลนี้ถูกใช้งานในระบบแล้ว")
+
+    clean_id = payload.id_card.strip().replace("-", "")
+    existing_id = session.exec(select(PatientProfile).where(PatientProfile.id_card == clean_id)).first()
+    if existing_id:
+        raise HTTPException(status_code=400, detail="หมายเลขบัตรประชาชนนี้มีข้อมูลในระบบแล้ว")
+
+    new_user = User(
+        email=payload.email,
+        hashed_password=get_password_hash(payload.password),
+        role=UserRole.PATIENT,
+    )
+    session.add(new_user)
+    session.commit()
+    session.refresh(new_user)
+
+    hn_count = len(session.exec(select(PatientProfile)).all()) + 1
+    new_hn = f"HN{hn_count:04d}"
+
+    new_profile = PatientProfile(
+        user_id=new_user.id,
+        hn=new_hn,
+        first_name=payload.first_name,
+        last_name=payload.last_name,
+        id_card=clean_id,
+        phone=payload.phone,
+        gender=payload.gender,
+        birth_date=payload.birth_date,
+        address=payload.address,
+        congenital_disease=payload.congenital_disease,
+        drug_allergy=payload.drug_allergy,
+    )
+    session.add(new_profile)
+    session.commit()
+
+    token = create_access_token({"sub": str(new_user.id), "role": new_user.role.value})
+    return TokenResponse(
+        access_token=token,
+        role=new_user.role.value,
+        user_id=new_user.id,
+        full_name=f"{new_profile.first_name} {new_profile.last_name}",
+    )
+
+
+@router.post("/token", response_model=TokenResponse)
+@router.post("/login", response_model=TokenResponse)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
+    user = session.exec(select(User).where(User.email == form_data.username)).first()
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="อีเมลหรือรหัสผ่านไม่ถูกต้อง")
+
+    profile = session.exec(select(PatientProfile).where(PatientProfile.user_id == user.id)).first()
+    full_name = f"{profile.first_name} {profile.last_name}" if profile else user.email
+
+    token = create_access_token({"sub": str(user.id), "role": user.role.value})
+    return TokenResponse(
+        access_token=token,
+        role=user.role.value,
+        user_id=user.id,
+        full_name=full_name,
+    )
+
+
+@router.get("/me", response_model=UserProfileResponse)
+def get_me(current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    profile = session.exec(select(PatientProfile).where(PatientProfile.user_id == current_user.id)).first()
+    return UserProfileResponse(
+        id=current_user.id,
+        email=current_user.email,
+        role=current_user.role.value,
+        first_name=profile.first_name if profile else None,
+        last_name=profile.last_name if profile else None,
+        phone=profile.phone if profile else None,
+        hn=profile.hn if profile else None,
+    )

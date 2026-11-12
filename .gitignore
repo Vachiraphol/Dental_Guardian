@@ -1,3 +1,4 @@
+.web
 # Python bytecode and cache
 *.py[cod]
 __pycache__/
@@ -8,9 +9,12 @@ venv/
 
 # Environment variables and secrets
 .env
+.env.*
+!.env.example
 
-# Reflex generated files
+# Reflex generated files & lock
 .web/
+reflex.lock/
 
 # Existing project-specific rules
 assets/external/
@@ -20,3 +24,7 @@ assets/external/
 .DS_Store
 reflex.log
 deploy.exp
+seed_users.py
+
+dist_frontend/
+frontend.zip

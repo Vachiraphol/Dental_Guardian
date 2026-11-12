@@ -13,7 +13,6 @@ from dental_clinic_system.state import AppState
 def booking_summary() -> rx.Component:
     d = AppState.booking_draft
     return public_page(
-        # TODO(backend): show login_required(...) instead when the visitor is not a logged-in patient
         rx.vstack(
             rx.cond(AppState.has_booking_slip, step_bar(3), step_bar(2)),
             rx.cond(

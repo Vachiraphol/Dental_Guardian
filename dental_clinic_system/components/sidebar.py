@@ -9,7 +9,7 @@ MENU = [
         ("dashboard", "แดชบอร์ดผู้ป่วยรายวัน", "layout_dashboard", "/dashboard"),
         ("requests", "จัดการคำขอจองคิว", "inbox", "/requests"),
         ("appointments", "จัดการนัดหมายคนไข้", "calendar_check", "/appointments"),
-        ("schedule", "ตั้งค่าตารางเวลาทันตแพทย์", "calendar_cog", "/schedule"),
+        ("schedule", "ตารางเวลาปฏิบัติงานทันตแพทย์", "calendar_cog", "/schedule"),
     ]),
     ("ประวัติการรักษา", [
         ("records", "บันทึกการรักษาและผังฟัน", "clipboard_pen", "/records"),
@@ -17,14 +17,38 @@ MENU = [
     ]),
 ]
 
+# เมนูเฉพาะทันตแพทย์
+DENTIST_MENU = [
+    ("ประวัติการรักษา", [
+        ("records", "บันทึกการรักษาและผังฟัน", "clipboard_pen", "/records"),
+    ]),
+    ("ตารางปฏิบัติงาน", [
+        ("schedule", "ตารางเวลาปฏิบัติงานทันตแพทย์", "calendar_cog", "/schedule"),
+    ]),
+]
+
 
 def sidebar_item(key: str, text: str, icon: str, url: str, active: str) -> rx.Component:
     is_active = key == active
+    display_text = (
+        rx.cond(
+            AppState.user_role == "dentist",
+            "ตารางเวลาปฏิบัติงานทันตแพทย์",
+            "ตั้งค่าตารางเวลาทันตแพทย์",
+        )
+        if key == "schedule"
+        else text
+    )
+
     return rx.link(
         rx.hstack(
             rx.icon(tag=icon, size=18, color="var(--primary-color)" if is_active else "var(--slate-10)"),
-            rx.text(text, size="2", weight="bold" if is_active else "medium",
-                    color="var(--primary-color)" if is_active else "var(--slate-11)"),
+            rx.text(
+                display_text,
+                size="2",
+                weight="bold" if is_active else "medium",
+                color="var(--primary-color)" if is_active else "var(--slate-11)",
+            ),
             rx.spacer(),
             rx.cond(
                 AppState.pending_count > 0,
@@ -46,15 +70,53 @@ def sidebar_item(key: str, text: str, icon: str, url: str, active: str) -> rx.Co
     )
 
 
-def sidebar(active: str = "") -> rx.Component:
+def _build_sections(menu_list, active: str):
     sections = []
-    for title, items in MENU:
+    for title, items in menu_list:
         sections.append(rx.text(title, size="1", weight="bold", color="var(--slate-9)", padding_x="14px", padding_top="12px"))
         sections.extend(sidebar_item(*item, active) for item in items)
+    return sections
+
+
+def sidebar(active: str = "") -> rx.Component:
     return rx.box(
         rx.vstack(
             rx.link(
-                brand("42px", "สำหรับหมอฟันและพยาบาล"),
+                rx.hstack(
+                    rx.image(
+                        src="/logo.png",
+                        alt="Dental Guardian Dental Clinic",
+                        width="auto",
+                        height="58px",
+                        object_fit="contain",
+                        flex_shrink="0",
+                    ),
+                    rx.vstack(
+                        rx.text(
+                            "Dental Guardian",
+                            size="5",
+                            weight="bold",
+                            font_weight="900",
+                            color="#1e3f4b",
+                            white_space="nowrap",
+                            line_height="1.1",
+                            letter_spacing="-0.02em",
+                        ),
+                        rx.text(
+                            "สำหรับหมอฟันและพยาบาล",
+                            size="3",
+                            weight="bold",
+                            color="var(--slate-10)",
+                            white_space="nowrap",
+                            line_height="1.2",
+                        ),
+                        spacing="1",
+                        align_items="start",
+                        justify="center",
+                    ),
+                    align="center",
+                    spacing="3",
+                ),
                 href="/",
                 underline="none",
                 padding_x="12px",
@@ -62,22 +124,36 @@ def sidebar(active: str = "") -> rx.Component:
                 border_bottom="1px solid var(--slate-4)",
                 width="100%",
             ),
-            *sections,
+            rx.cond(
+                AppState.user_role == "dentist",
+                rx.vstack(*_build_sections(DENTIST_MENU, active), width="100%", spacing="1"),
+                rx.vstack(*_build_sections(MENU, active), width="100%", spacing="1"),
+            ),
             rx.spacer(),
             rx.vstack(
                 rx.hstack(
                     rx.avatar(fallback=AppState.user_initials, size="2", radius="full", color_scheme="purple"),
                     rx.vstack(
                         rx.text(AppState.user_name, size="2", weight="medium"),
-                        rx.text("เจ้าหน้าที่คลินิก", size="1", color="var(--slate-10)"),
+                        rx.text(
+                            rx.cond(AppState.user_role == "dentist", "ทันตแพทย์", "เจ้าหน้าที่คลินิก"),
+                            size="1",
+                            color="var(--slate-10)",
+                        ),
                         spacing="0",
                     ),
                     align="center",
                     padding_x="12px",
                     width="100%",
                 ),
-                rx.button(rx.icon(tag="log_out", size=16), "ออกจากระบบ", on_click=AppState.logout,
-                          variant="soft", color_scheme="gray", width="100%"),
+                rx.button(
+                    rx.icon(tag="log_out", size=16),
+                    "ออกจากระบบ",
+                    on_click=AppState.logout,
+                    variant="soft",
+                    color_scheme="gray",
+                    width="100%",
+                ),
                 border_top="1px solid var(--slate-4)",
                 padding_top="16px",
                 width="100%",
@@ -102,28 +178,51 @@ def sidebar(active: str = "") -> rx.Component:
     )
 
 
+def _build_mobile_items(menu_list, active: str):
+    menu_items = []
+    for title, items in menu_list:
+        menu_items.append(rx.text(title, size="1", weight="bold", color="var(--slate-9)", padding_x="8px", padding_y="4px"))
+        for key, text, icon, url in items:
+            item_label = (
+                rx.cond(
+                    AppState.user_role == "dentist",
+                    "ตารางเวลาปฏิบัติงานทันตแพทย์",
+                    "ตั้งค่าตารางเวลาทันตแพทย์",
+                )
+                if key == "schedule"
+                else text
+            )
+            menu_items.append(
+                rx.menu.item(
+                    rx.icon(tag=icon, size=14),
+                    item_label,
+                    rx.cond(AppState.pending_count > 0, rx.badge(AppState.pending_count, color_scheme="red", radius="full"))
+                    if key == "requests" else rx.fragment(),
+                    on_click=rx.redirect(url),
+                    **({"color": "var(--primary-color)"} if key == active else {}),
+                )
+            )
+        menu_items.append(rx.menu.separator())
+    return menu_items
+
+
 def mobile_topbar(active: str = "") -> rx.Component:
     """Compact staff navigation for phones: logo + current page + dropdown menu."""
-    current = next((text for _, items in MENU for key, text, _, _ in items if key == active), "")
-    menu_items = []
-    for title, items in MENU:
-        menu_items.append(rx.text(title, size="1", weight="bold", color="var(--slate-9)", padding_x="8px", padding_y="4px"))
-        menu_items.extend(
-            rx.menu.item(
-                rx.icon(tag=icon, size=14), text,
-                rx.cond(AppState.pending_count > 0, rx.badge(AppState.pending_count, color_scheme="red", radius="full"))
-                if key == "requests" else rx.fragment(),
-                on_click=rx.redirect(url),
-                **({"color": "var(--primary-color)"} if key == active else {}),
-            )
-            for key, text, icon, url in items
+    current_title = (
+        rx.cond(
+            AppState.user_role == "dentist",
+            "ตารางเวลาปฏิบัติงานทันตแพทย์",
+            "ตั้งค่าตารางเวลาทันตแพทย์",
         )
-        menu_items.append(rx.menu.separator())
+        if active == "schedule"
+        else next((text for _, items in MENU for key, text, _, _ in items if key == active), "")
+    )
+
     return rx.hstack(
-        rx.link(logo("36px"), href="/"),
+        rx.link(logo("48px"), href="/"),
         rx.vstack(
             rx.text("Dental Guardian", size="1", color="var(--slate-10)"),
-            rx.text(current, size="2", weight="bold", white_space="nowrap", overflow="hidden", text_overflow="ellipsis"),
+            rx.text(current_title, size="2", weight="bold", white_space="nowrap", overflow="hidden", text_overflow="ellipsis"),
             spacing="0",
             min_width="0",
             flex="1",
@@ -138,7 +237,11 @@ def mobile_topbar(active: str = "") -> rx.Component:
                 ),
             ),
             rx.menu.content(
-                *menu_items,
+                rx.cond(
+                    AppState.user_role == "dentist",
+                    rx.fragment(*_build_mobile_items(DENTIST_MENU, active)),
+                    rx.fragment(*_build_mobile_items(MENU, active)),
+                ),
                 rx.menu.item(rx.icon(tag="log_out", size=14), "ออกจากระบบ (" + AppState.user_name + ")", color="red", on_click=AppState.logout),
                 align="end",
             ),

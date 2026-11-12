@@ -239,3 +239,39 @@ a[href*="reflex.dev"] * {
     color: #1E293B !important;
     background-color: rgba(124, 105, 172, 0.12) !important;
 }
+
+/* ========================================================
+   5. ENHANCE CHECKBOX VISIBILITY
+   ======================================================== */
+.rt-CheckboxButton,
+.rt-BaseCheckboxRoot,
+button[role="checkbox"] {
+    background-color: #FFFFFF !important;
+    border: 1.5px solid #94A3B8 !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+    width: 18px !important;
+    height: 18px !important;
+    border-radius: 5px !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}
+
+.rt-CheckboxButton:hover,
+.rt-BaseCheckboxRoot:hover,
+button[role="checkbox"]:hover {
+    border-color: #7C69AC !important;
+}
+
+.rt-CheckboxButton[data-state="checked"],
+.rt-BaseCheckboxRoot[data-state="checked"],
+button[role="checkbox"][aria-checked="true"],
+button[role="checkbox"][data-state="checked"] {
+    background-color: #7C69AC !important;
+    border-color: #7C69AC !important;
+}
+
+.rt-CheckboxIndicator,
+button[role="checkbox"] svg {
+    color: #FFFFFF !important;
+    stroke: #FFFFFF !important;
+}

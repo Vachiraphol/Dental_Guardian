@@ -169,7 +169,7 @@ def user_menu() -> rx.Component:
                     color_scheme="purple",
                     radius="full",
                     size={"initial": "2", "md": "3"},
-                    padding_x={"initial": "12px", "md": "16px"},
+                    padding_x={"initial": "10px", "md": "16px"},
                 ),
                 href="/login",
             ),
@@ -256,12 +256,12 @@ def mobile_menu() -> rx.Component:
 def header() -> rx.Component:
     return rx.box(
         rx.hstack(
-            # 1. ฝั่งซ้าย: แบรนด์และโลโก้
-            rx.link(brand(), href="/", underline="none", flex_shrink="0"),
+            # 1. ฝั่งซ้าย: แบรนด์และโลโก้ (อนุญาตให้ย่อขนาดตามหน้าจอมือถือได้)
+            rx.link(brand(), href="/", underline="none", flex_shrink="1", min_width="0"),
 
             rx.spacer(),
 
-            # 2. ตรงกลาง: แคปซูลเมนูนำทางหลัก (ไม่ใช้ position="absolute" และแสดงเฉพาะจอ Desktop >= 1280px)
+            # 2. ตรงกลาง: แคปซูลเมนูนำทางหลัก (แสดงเฉพาะจอ Desktop >= 1280px)
             rx.hstack(
                 nav_link("หน้าแรก", "/"),
                 nav_link("จองคิว", "/booking"),
@@ -292,16 +292,16 @@ def header() -> rx.Component:
                 user_menu(),
                 rx.box(mobile_menu(), display=["block", "block", "block", "block", "none"]),
                 align="center",
-                spacing="2",
+                spacing="1",
                 flex_shrink="0",
             ),
             width="100%",
             max_width="1280px",
             margin="0 auto",
             align="center",
-            padding_x=["12px", "20px", "24px"],
-            padding_y="12px",
-            gap="12px",
+            padding_x=["10px", "20px", "24px"],
+            padding_y="10px",
+            gap=["6px", "12px"],
         ),
         background_color="transparent",
         position="relative",

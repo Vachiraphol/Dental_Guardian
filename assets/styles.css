@@ -39,6 +39,8 @@ html,
 .radix-themes:is(.dark, [data-theme='dark']) {
     background-color: #FAFAFA !important;
     color: #1E293B !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
 }
 
 /* ล็อกสีข้อความแถบ Header และ Navbar (ยกเว้นปุ่ม .rt-Button เพื่อไม่ให้สีตัวหนังสือปุ่มเพี้ยน) */
@@ -179,7 +181,7 @@ body, html, .rt-Text, .rt-Heading, .rt-Button, .rt-Link, .rt-Box, .rt-Flex, .rt-
 .dg-scroll-x::-webkit-scrollbar { display: none; }
 
 /* ========================================================
-   4. HIDE REFLEX BADGE & ENHANCE ROLE SELECTOR
+   4. HIDE REFLEX BADGE & ENHANCE ROLE SELECTOR (PILL DESIGN)
    ======================================================== */
 a[href*="reflex.dev"],
 a[href*="reflex.dev"] * {
@@ -189,36 +191,75 @@ a[href*="reflex.dev"] * {
     pointer-events: none !important;
 }
 
+/* กล่องนอกทรงแคปซูลมนสวย พอดีกับทุกหน้าจอ */
 .rt-SegmentedControlRoot {
-    background-color: #EFEBF5 !important;
-    border: 1px solid #D8CEEA !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    background-color: #F3ECFA !important;
+    border: 1.5px solid #E2CEF7 !important;
     padding: 4px !important;
-    border-radius: 10px !important;
+    border-radius: 9999px !important;
+    height: 44px !important;
+    display: grid !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: 1fr !important;
+    align-items: center !important;
+    overflow: hidden !important;
+}
+
+/* ซ่อนตัว Indicator ภายในของ Radix เพื่อไม่ให้ซ้อนกันเป็นกรอบ 2 ชั้น */
+.rt-SegmentedControlIndicator {
+    display: none !important;
+}
+
+/* ปุ่มตัวเลือกแต่ละฝั่ง */
+.rt-SegmentedControlItem {
+    height: 100% !important;
+    min-width: 0 !important;
+    border-radius: 9999px !important;
+    padding: 0 10px !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    white-space: nowrap !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.rt-SegmentedControlItem::before,
+.rt-SegmentedControlItem::after {
+    display: none !important;
 }
 
 .rt-SegmentedControlItem[data-state="on"],
 .rt-SegmentedControlItem[aria-checked="true"] {
-    background-color: #8E4EC6 !important;
+    background: linear-gradient(135deg, #9D5CE5 0%, #8E4EC6 100%) !important;
     color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
     font-weight: 600 !important;
-    box-shadow: 0 2px 6px rgba(142, 78, 198, 0.35) !important;
+    box-shadow: 0 3px 10px rgba(142, 78, 198, 0.35) !important;
 }
 
 .rt-SegmentedControlItem[data-state="on"] *,
 .rt-SegmentedControlItem[aria-checked="true"] * {
     color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
 }
 
 .rt-SegmentedControlItem[data-state="off"],
 .rt-SegmentedControlItem[aria-checked="false"] {
-    color: #475569 !important;
+    background: transparent !important;
+    color: #653294 !important;
+    -webkit-text-fill-color: #653294 !important;
     font-weight: 500 !important;
 }
 
 .rt-SegmentedControlItem[data-state="off"]:hover,
 .rt-SegmentedControlItem[aria-checked="false"]:hover {
-    color: #1E293B !important;
-    background-color: rgba(142, 78, 198, 0.12) !important;
+    color: #4E2277 !important;
+    background-color: rgba(142, 78, 198, 0.08) !important;
 }
 
 /* ========================================================
@@ -289,7 +330,7 @@ html body button.rt-Button[data-variant="solid"][style]:hover {
     box-shadow: 0 6px 18px rgba(142, 78, 198, 0.35) !important;
 }
 
-/* ปุ่มอ่อน ("เข้าสู่ระบบ", "บริการของเรา") -> พื้นหลังสีม่วงอ่อน #F7EDFE ตัวหนังสือสีม่วงเข้ม #8E4EC6 (สีเดียวกับพื้นหลังปุ่มสมัครสมาชิก) */
+/* ปุ่มอ่อน ("เข้าสู่ระบบ", "บริการของเรา") -> พื้นหลังสีม่วงอ่อน #F7EDFE ตัวหนังสือสีม่วงเข้ม #8E4EC6 */
 html body header button.rt-Button[data-variant="soft"],
 html body button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]),
 html body a button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]),
@@ -329,4 +370,23 @@ html body button.rt-Button[data-variant="outline"][data-accent-color="purple"] {
     color: #8E4EC6 !important;
     -webkit-text-fill-color: #8E4EC6 !important;
     border: 1.5px solid #8E4EC6 !important;
+}
+
+/* ========================================================
+   7. MOBILE RESPONSIVE LOCKS
+   ======================================================== */
+#__next {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+}
+
+@media (max-width: 480px) {
+    .rt-SegmentedControlRoot {
+        height: 40px !important;
+        padding: 3px !important;
+    }
+    .rt-SegmentedControlItem {
+        font-size: 13px !important;
+        padding: 0 6px !important;
+    }
 }

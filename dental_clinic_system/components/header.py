@@ -173,7 +173,14 @@ def user_menu() -> rx.Component:
         # บุคคลทั่วไป (ยังไม่ได้ล็อกอิน)
         rx.hstack(
             rx.link(
-                rx.button("เข้าสู่ระบบ", variant="soft", color_scheme="purple", radius="full", size="3"),
+                rx.button(
+                    "เข้าสู่ระบบ",
+                    variant="soft",
+                    color_scheme="purple",
+                    radius="full",
+                    size={"initial": "2", "sm": "3"},
+                    padding_x={"initial": "12px", "sm": "16px"},
+                ),
                 href="/login",
             ),
             rx.link(
@@ -252,7 +259,7 @@ def header() -> rx.Component:
     return rx.box(
         rx.hstack(
             # 1. ฝั่งซ้าย: แบรนด์และโลโก้
-            rx.link(brand(), href="/", underline="none", flex_shrink="0"),
+            rx.link(brand(), href="/", underline="none", flex_shrink="1", min_width="0"),
 
             # 2. ตรงกลาง: แคปซูลเมนูนำทางหลัก จัดกึ่งกลางหน้าจออย่างสมดุล
             rx.box(
@@ -298,7 +305,7 @@ def header() -> rx.Component:
             max_width="1280px",
             margin="0 auto",
             align="center",
-            padding_x=["16px", "24px"],
+            padding_x=["12px", "24px"],
             padding_y="12px",
             position="relative",
         ),

@@ -2,7 +2,6 @@
 
 /* ========================================================
    1. FORCE CHROMIUM TO NEVER AUTO-INVERT COLORS
-   คีย์เวิร์ด "only light" สั่งให้เบราว์เซอร์ห้าม Invert สีเด็ดขาด
    ======================================================== */
 :root,
 html,
@@ -16,7 +15,6 @@ body,
     --primary-light: #F7EDFE;
     --footer-bg: #F0EFEA;
 
-    /* Override ตัวแปรสีพื้นฐานของ Radix Themes ให้เป็น Light Mode เสมอ */
     --color-background: #FAFAFA !important;
     --color-surface: #FFFFFF !important;
     --color-panel-solid: #FFFFFF !important;
@@ -31,10 +29,11 @@ body,
 }
 
 /* ========================================================
-   2. CORE TEXT & BACKGROUND LOCKS
+   2. CORE TEXT, CARD & SINGLE-BORDER INPUT LOCKS
    ======================================================== */
 body,
 html,
+#__next,
 .radix-themes,
 .radix-themes:is(.dark, [data-theme='dark']) {
     background-color: #FAFAFA !important;
@@ -43,7 +42,7 @@ html,
     overflow-x: hidden !important;
 }
 
-/* ล็อกสีข้อความแถบ Header และ Navbar (ยกเว้นปุ่ม .rt-Button เพื่อไม่ให้สีตัวหนังสือปุ่มเพี้ยน) */
+/* ล็อกสีข้อความแถบ Header และ Navbar (ยกเว้นปุ่ม .rt-Button) */
 header a:not(:has(.rt-Button)),
 header span:not(.rt-Button *),
 header p:not(.rt-Button *),
@@ -53,10 +52,9 @@ nav p:not(.rt-Button *) {
     color: #1E293B !important;
 }
 
-/* ล็อกพื้นหลังกล่อง การ์ด และ Modal */
+/* การ์ดและ Modal: ลบ div[class*="rt-Card"] ออกเพื่อไม่ให้เกิดกรอบซ้อน 2 ชั้น */
 .rt-Card,
 .rt-DialogContent,
-div[class*="rt-Card"],
 .radix-themes:is(.dark, [data-theme='dark']) .rt-Card,
 .radix-themes:is(.dark, [data-theme='dark']) .rt-DialogContent {
     background-color: #FFFFFF !important;
@@ -64,21 +62,40 @@ div[class*="rt-Card"],
     border: 1px solid #E2E8F0 !important;
 }
 
-/* ล็อก Input, Textarea, Select ให้พื้นหลังขาว ขอบเทาอ่อน ไม่ทึบมืด */
-input,
-textarea,
-select,
+.rt-Card::before,
+.rt-Card::after {
+    border: none !important;
+}
+
+/* ช่องกรอกข้อมูล (Input / Textarea / Select): มีเส้นขอบชั้นเดียวที่กรอบนอก */
 .rt-TextFieldRoot,
-.rt-TextFieldInput,
 .rt-TextAreaRoot,
 .rt-SelectTrigger,
-.radix-themes:is(.dark, [data-theme='dark']) input,
-.radix-themes:is(.dark, [data-theme='dark']) textarea,
-.radix-themes:is(.dark, [data-theme='dark']) select,
 .radix-themes:is(.dark, [data-theme='dark']) .rt-TextFieldRoot,
-.radix-themes:is(.dark, [data-theme='dark']) .rt-TextFieldInput,
 .radix-themes:is(.dark, [data-theme='dark']) .rt-TextAreaRoot,
 .radix-themes:is(.dark, [data-theme='dark']) .rt-SelectTrigger {
+    background-color: #FFFFFF !important;
+    color: #1E293B !important;
+    border: 1px solid #CBD5E1 !important;
+    box-shadow: none !important;
+}
+
+/* ลบเส้นขอบชั้นในของ <input> และ <textarea> เพื่อไม่ให้ซ้อน 2 ชั้น */
+.rt-TextFieldRoot input,
+.rt-TextFieldInput,
+.rt-TextAreaRoot textarea,
+.rt-TextAreaInput {
+    background-color: transparent !important;
+    color: #1E293B !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Input/Select ทั่วไปที่ไม่ได้อยู่ใน rt-TextFieldRoot */
+input:not(.rt-TextFieldInput),
+textarea:not(.rt-TextAreaInput),
+select {
     background-color: #FFFFFF !important;
     color: #1E293B !important;
     border: 1px solid #CBD5E1 !important;
@@ -89,7 +106,6 @@ textarea::placeholder {
     color: #94A3B8 !important;
 }
 
-/* ปิดกั้นคำสั่ง Dark Mode ของเบราว์เซอร์ */
 @media (prefers-color-scheme: dark) {
     :root, html, body, .radix-themes, .dark, [data-theme='dark'] {
         color-scheme: only light !important;
@@ -114,7 +130,6 @@ body, html, .rt-Text, .rt-Heading, .rt-Button, .rt-Link, .rt-Box, .rt-Flex, .rt-
     color: #E11D48 !important;
 }
 
-/* Animations & Layouts */
 @keyframes fade-in {
     from { opacity: 0; transform: translateY(30px); }
     to { opacity: 1; transform: translateY(0); }
@@ -181,7 +196,7 @@ body, html, .rt-Text, .rt-Heading, .rt-Button, .rt-Link, .rt-Box, .rt-Flex, .rt-
 .dg-scroll-x::-webkit-scrollbar { display: none; }
 
 /* ========================================================
-   4. HIDE REFLEX BADGE & ENHANCE ROLE SELECTOR (PILL DESIGN)
+   4. HIDE REFLEX BADGE & PILL ROLE SELECTOR
    ======================================================== */
 a[href*="reflex.dev"],
 a[href*="reflex.dev"] * {
@@ -191,7 +206,6 @@ a[href*="reflex.dev"] * {
     pointer-events: none !important;
 }
 
-/* กล่องนอกทรงแคปซูลมนสวย พอดีกับทุกหน้าจอ */
 .rt-SegmentedControlRoot {
     width: 100% !important;
     max-width: 100% !important;
@@ -208,12 +222,10 @@ a[href*="reflex.dev"] * {
     overflow: hidden !important;
 }
 
-/* ซ่อนตัว Indicator ภายในของ Radix เพื่อไม่ให้ซ้อนกันเป็นกรอบ 2 ชั้น */
 .rt-SegmentedControlIndicator {
     display: none !important;
 }
 
-/* ปุ่มตัวเลือกแต่ละฝั่ง */
 .rt-SegmentedControlItem {
     height: 100% !important;
     min-width: 0 !important;
@@ -301,7 +313,6 @@ button[role="checkbox"] svg {
 /* ========================================================
    6. UNIFIED PURPLE BUTTONS (SOLID = #8E4EC6, SOFT = #F7EDFE)
    ======================================================== */
-/* ปุ่มทึบ ("สมัครสมาชิก", "นัดหมายล่วงหน้า") -> พื้นหลังสีม่วง #8E4EC6 ตัวหนังสือสีขาว */
 html body button.rt-Button[data-variant="solid"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]),
 html body a button.rt-Button[data-variant="solid"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]),
 html body button.rt-Button[data-variant="solid"][style] {
@@ -330,7 +341,6 @@ html body button.rt-Button[data-variant="solid"][style]:hover {
     box-shadow: 0 6px 18px rgba(142, 78, 198, 0.35) !important;
 }
 
-/* ปุ่มอ่อน ("เข้าสู่ระบบ", "บริการของเรา") -> พื้นหลังสีม่วงอ่อน #F7EDFE ตัวหนังสือสีม่วงเข้ม #8E4EC6 */
 html body header button.rt-Button[data-variant="soft"],
 html body button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]),
 html body a button.rt-Button[data-variant="soft"]:not([data-accent-color="red"]):not([data-accent-color="green"]):not([data-accent-color="gray"]),
@@ -364,7 +374,6 @@ html body button.rt-Button[data-variant="soft"][style]:hover {
     -webkit-text-fill-color: #793AAF !important;
 }
 
-/* ปุ่มกรอบ (Outline) -> ขอบม่วง ตัวหนังสือม่วงเข้ม #8E4EC6 */
 html body button.rt-Button[data-variant="outline"][data-accent-color="purple"] {
     background-color: #FFFFFF !important;
     color: #8E4EC6 !important;
@@ -373,14 +382,28 @@ html body button.rt-Button[data-variant="outline"][data-accent-color="purple"] {
 }
 
 /* ========================================================
-   7. MOBILE RESPONSIVE LOCKS
+   7. RESPONSIVE ADAPTATION (MOBILE & IPAD / TABLET)
    ======================================================== */
-#__next {
-    max-width: 100vw !important;
-    overflow-x: hidden !important;
-}
-
-@media (max-width: 480px) {
+/* หน้าจอมือถือ (Mobile: <= 640px) */
+@media (max-width: 640px) {
+    /* ย่อขนาดโลโก้และชื่อคลินิกไม่ให้ชนกับปุ่ม "เข้าสู่ระบบ" */
+    header img {
+        height: 40px !important;
+        width: auto !important;
+    }
+    header a:first-child .rt-Text:first-of-type {
+        font-size: 16px !important;
+        line-height: 1.1 !important;
+    }
+    header a:first-child .rt-Text:last-of-type {
+        font-size: 11px !important;
+    }
+    header button.rt-Button[data-variant="soft"] {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+        font-size: 12px !important;
+        height: 32px !important;
+    }
     .rt-SegmentedControlRoot {
         height: 40px !important;
         padding: 3px !important;
@@ -388,5 +411,19 @@ html body button.rt-Button[data-variant="outline"][data-accent-color="purple"] {
     .rt-SegmentedControlItem {
         font-size: 13px !important;
         padding: 0 6px !important;
+    }
+}
+
+/* หน้าจอ iPad / แท็บเล็ต (Tablet: 641px - 1024px) */
+@media (min-width: 641px) and (max-width: 1024px) {
+    header img {
+        height: 48px !important;
+        width: auto !important;
+    }
+    header a:first-child .rt-Text:first-of-type {
+        font-size: 19px !important;
+    }
+    header a:first-child .rt-Text:last-of-type {
+        font-size: 13px !important;
     }
 }

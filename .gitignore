@@ -25,3 +25,6 @@ assets/external/
 reflex.log
 deploy.exp
 seed_users.py
+
+dist_frontend/
+frontend.zip
